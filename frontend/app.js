@@ -60,28 +60,46 @@ async function refreshDiagnostics(){
  let base=$("#api-base").value.trim();
  while(base.endsWith("/"))base=base.slice(0,-1);
  if(!(base.startsWith("http://")||base.startsWith("https://"))){note.textContent="Enter a valid HTTP or HTTPS API address.";return}
- button.disabled=true;button.textContent="Checking…";note.textContent="Checking API health, worker and model registry…";
+ const opsToken=$("#operations-token").value.trim();
+ const privateHeaders=opsToken?{"X-Operations-Token":opsToken}:{};
+ button.disabled=true;button.textContent="Checking…";note.textContent="Checking public service health and protected operations…";
  const row=(name,detail,status,kind)=>'<div><span class="arch-dot '+kind+'"></span><b>'+escapeHtml(name)+'</b><small>'+escapeHtml(detail)+'</small><em>'+escapeHtml(status)+'</em></div>';
  try{
-  const paths=["/api/health","/api/worker/status","/api/models","/api/system/ready","/api/worker/history?limit=12"];
-  const responses=await Promise.all(paths.map(path=>fetch(base+path,{headers:{Accept:"application/json"},cache:"no-store"})));
-  if(responses.some(r=>!r.ok))throw new Error("One or more API checks returned an error.");
-  const [health,worker,models,ready,history]=await Promise.all(responses.map(r=>r.json()));
-  renderWorkerHistory(history.items||[]);
-  const verified=models.verified_model_count||0;
-  const diag=worker.diagnostics||{};
-  const machineDetail=worker.connected?(diag.platform||"Local agent connected")+" · GPU: "+(diag.gpu_detected?(diag.gpu_detail||"Detected"):"not detected")+" · FFmpeg: "+(diag.tools&&diag.tools.ffmpeg?"yes":"no")+" · PyTorch: "+(diag.python_packages&&diag.python_packages.torch?"yes":"no"):"Start the local preflight agent to report hardware and software.";
+  const publicPaths=["/api/health","/api/models","/api/system/ready"];
+  const publicResponses=await Promise.all(publicPaths.map(path=>fetch(base+path,{headers:{Accept:"application/json"},cache:"no-store"})));
+  if(publicResponses.some(r=>!r.ok))throw new Error("The public API health check returned an error.");
+  const [health,models,ready]=await Promise.all(publicResponses.map(r=>r.json()));
+  let worker=null,history=null,opsError="";
+  if(opsToken){
+   const privatePaths=["/api/worker/status","/api/worker/history?limit=12","/api/operations/summary"];
+   const privateResponses=await Promise.all(privatePaths.map(path=>fetch(base+path,{headers:{Accept:"application/json",...privateHeaders},cache:"no-store"})));
+   if(privateResponses.every(r=>r.ok)){
+    const privateData=await Promise.all(privateResponses.map(r=>r.json()));
+    worker=privateData[0];history=privateData[1];renderWorkerHistory(history.items||[]);
+    const summary=privateData[2];
+    opsError="Private operations unlocked · "+summary.worker_history_records+" retained reports · "+summary.persistent_state+" state store.";
+   }else{
+    const failed=privateResponses.find(r=>!r.ok);
+    opsError=failed&&failed.status===401?"Operations token rejected. Check the server's RF983_OPERATIONS_TOKEN.":"Private operations are unavailable ("+(failed?failed.status:"unknown")+").";
+    renderWorkerHistory([]);
+   }
+  }else{
+   renderWorkerHistory([]);
+   opsError="Enter the private operations token to view machine diagnostics and worker history. The token is held only in this page's memory and is not saved.";
+  }
+  const verified=models.verified_model_count||0,diag=worker&&worker.diagnostics||{};
+  const machineDetail=worker?(worker.connected?(diag.platform||"Local agent connected")+" · GPU: "+(diag.gpu_detected?(diag.gpu_detail||"Detected"):"not detected")+" · FFmpeg: "+(diag.tools&&diag.tools.ffmpeg?"yes":"no")+" · PyTorch: "+(diag.python_packages&&diag.python_packages.torch?"yes":"no"):"No fresh heartbeat"):"Private machine details are locked.";
   host.innerHTML=[
    row("API connection",health.service+" · version "+health.version,"CONNECTED","ready"),
-   row("GPU worker",worker.connected?(worker.worker_id||"Worker online"):"No fresh heartbeat",worker.connected?"CONNECTED":"OFFLINE",worker.connected?"pending":"offline"),
-   row("Machine preflight",machineDetail,diag.gpu_detected?"GPU DETECTED":worker.connected?"AGENT ONLINE":"WAITING",diag.gpu_detected?"pending":worker.connected?"ready":"offline"),
+   row("GPU worker",worker?(worker.connected?(worker.worker_id||"Worker online"):"No fresh heartbeat"):"Protected · token required",worker?(worker.connected?"CONNECTED":"OFFLINE"):"LOCKED",worker?(worker.connected?"pending":"offline"):"pending"),
+   row("Machine preflight",machineDetail,worker?(diag.gpu_detected?"GPU DETECTED":worker.connected?"AGENT ONLINE":"WAITING"):"LOCKED",worker?(diag.gpu_detected?"pending":worker.connected?"ready":"offline"):"pending"),
    row("Verified models",verified+" verified · "+models.models.length+" candidates",verified?"VERIFIED":"NONE",verified?"ready":"offline"),
    row("Generation pipeline",ready.generation_reason||"Not enabled",ready.generation_enabled?"ENABLED":"DISABLED",ready.generation_enabled?"ready":"offline")
   ].join("");
-  note.textContent="Diagnostics received. A connected heartbeat or detected GPU does not prove a video can be rendered.";
+  note.textContent=opsError+" A connected heartbeat or detected GPU does not prove a video can be rendered.";
  }catch(error){
   host.innerHTML=row("API connection","Could not reach "+base,"UNAVAILABLE","offline")+row("GPU worker","Cannot verify without API","UNKNOWN","offline")+row("Verified models","Cannot verify without API","UNKNOWN","offline")+row("Generation pipeline","Must remain disabled","DISABLED","offline");
-  note.textContent="Check that the API is running, the address is correct, and CORS allows this frontend origin. "+error.message;
+  note.textContent="Check the API address and that the service is running. "+error.message;
  }finally{button.disabled=false;button.textContent="Run system check ↻"}
 }
 let autosaveHandle=null;
@@ -228,6 +246,6 @@ document.addEventListener("input",e=>{if(e.target.matches("input,textarea,select
 document.addEventListener("change",e=>{if(e.target.matches("input,textarea,select")&&!e.target.matches("#import-file,#reference-image")){scheduleDraftSave();renderProductionDesk()}});
 document.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="s"){e.preventDefault();saveProjectToLibrary()}});
 }
-function init(){state.shots=defaultShots();state.projects=getProjects();try{const draft=JSON.parse(localStorage.getItem(DRAFT_KEY)||"null");if(draft)applyForm(draft);else renderAll()}catch(e){renderAll()}bindEvents();renderAll()}
+function init(){const apiInput=$("#api-base");if(apiInput&&(location.protocol==="http:"||location.protocol==="https:"))apiInput.value=location.origin;state.shots=defaultShots();state.projects=getProjects();try{const draft=JSON.parse(localStorage.getItem(DRAFT_KEY)||"null");if(draft)applyForm(draft);else renderAll()}catch(e){renderAll()}bindEvents();renderAll()}
 init();
 })();
