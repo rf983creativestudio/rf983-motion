@@ -91,9 +91,21 @@
     <article class="model-feature panel"><div class="model-feature-top"><span class="model-logo">L</span><span class="research-tag">CANDIDATE B</span></div><h2>LTX-2.5</h2><p>Audio-video foundation model with multi-stage pipelines. High potential for advanced workflows, but model files and VRAM requirements are substantial.</p><div class="model-facts"><div><small>INPUT</small><b>Text / image / audio</b></div><div><small>PIPELINES</small><b>Distilled / DFR</b></div><div><small>STATUS</small><b>Not installed</b></div></div><a href="https://github.com/Lightricks/LTX-2" target="_blank" rel="noopener">Official repository ↗</a></article>
   </div>
   <div class="panel architecture-panel"><div class="eyebrow">SYSTEM STATUS</div><h2>What is connected today?</h2><div class="architecture-list"><div><span class="arch-dot ready"></span><b>Studio frontend</b><small>Available locally / static hosting</small><em>READY</em></div><div><span class="arch-dot ready"></span><b>Project drafts</b><small>Browser local storage only</small><em>READY</em></div><div><span class="arch-dot pending"></span><b>FastAPI service</b><small>Health and capability contract</small><em>FOUNDATION</em></div><div><span class="arch-dot offline"></span><b>GPU inference worker</b><small>No model weights or compute connected</small><em>OFFLINE</em></div><div><span class="arch-dot offline"></span><b>Render storage / job queue</b><small>Requires backend infrastructure</small><em>NOT BUILT</em></div></div></div>
+  <div class="panel architecture-panel" id="live-diagnostics">
+    <div class="eyebrow">LIVE CONNECTION CHECK</div><h2>Connect to your local API</h2>
+    <p class="helper">This checks your own running API. It does not upload prompts or start generation.</p>
+    <div class="diagnostic-controls"><label for="api-base">LOCAL API ADDRESS</label><input id="api-base" type="url" value="http://localhost:8000" spellcheck="false"><button class="small-outline" id="refresh-diagnostics" type="button">Run system check ↻</button></div>
+    <div class="architecture-list" id="diagnostic-results" aria-live="polite">
+      <div><span class="arch-dot offline"></span><b>API connection</b><small>Not checked yet</small><em>UNKNOWN</em></div>
+      <div><span class="arch-dot offline"></span><b>GPU worker</b><small>Not checked yet</small><em>UNKNOWN</em></div>
+      <div><span class="arch-dot offline"></span><b>Verified models</b><small>Not checked yet</small><em>UNKNOWN</em></div>
+      <div><span class="arch-dot offline"></span><b>Generation pipeline</b><small>Remains disabled until every production gate passes</small><em>DISABLED</em></div>
+    </div>
+    <small id="diagnostic-note" class="helper">The API must be running and allow this frontend origin. Local-only drafts stay in this browser.</small>
+  </div>
   <div class="panel reality-panel"><b>Zero-budget reality check</b><p>GitHub can store source code and host a static interface; it cannot run a cinematic video model. High-quality generation requires GPU time, model storage and bandwidth. We will keep the project private, avoid committing large weights or secrets, and only enable generation after a real worker and secure job pipeline are configured.</p></div>
 </section>
-<footer class="app-footer"><span>RF983 MOTION · BUILD 0.2.0</span><span>PRIVATE CREATIVE TECHNOLOGY PROJECT</span><span>DESIGNED FOR THE FRAME</span></footer>
+<footer class="app-footer"><span>RF983 MOTION · BUILD 0.4.0</span><span>PRIVATE CREATIVE TECHNOLOGY PROJECT</span><span>DESIGNED FOR THE FRAME</span></footer>
 </main>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
