@@ -73,3 +73,10 @@
 .history-facts{display:flex;flex-wrap:wrap;gap:6px}.history-facts span{font-size:9px;color:#b9c8c4;border:1px solid #2b3d43;border-radius:20px;padding:5px 8px}
 .history-empty{padding:22px;border:1px dashed #344650;border-radius:8px;color:var(--muted);font-size:10px;text-align:center}
 @media(max-width:680px){.history-heading{flex-direction:column}.history-item{grid-template-columns:1fr;gap:8px}}
+
+
+/* Build 0.9.0 — public launch and protected operations controls */
+.diagnostic-controls input[type="password"]{letter-spacing:.08em}
+.diagnostic-controls input::placeholder{letter-spacing:0;color:#71808a}
+#diagnostic-note{line-height:1.6;max-width:900px}
+#worker-history .history-empty{line-height:1.6}
