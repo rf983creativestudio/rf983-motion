@@ -23,7 +23,7 @@ except ImportError:
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_WAN_REPO = Path(os.getenv("RF983_WAN_REPO", str(ROOT / "third_party" / "Wan2.2")))
 DEFAULT_CHECKPOINT = Path(os.getenv("RF983_WAN_CHECKPOINT", str(ROOT / "models" / "Wan2.2-TI2V-5B")))
-DEFAULT_OUTPUT_ROOT = Path(os.getenv("RF983_RENDER_DIR", str(ROOT / "renders")))
+DEFAULT_OUTPUT_ROOT = Path(os.getenv("RF983_RENDER_DIR", str(ROOT / "worker" / "renders")))
 MIN_GPU_MEMORY_MIB = 23_000  # conservative floor for a marketed 24 GB GPU
 
 
