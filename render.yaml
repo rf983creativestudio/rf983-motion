@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: rf983-motion
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    autoDeploy: true
+    healthCheckPath: /api/health
+    envVars:
+      - key: RF983_WORKER_TOKEN
+        generateValue: true
+      - key: RF983_OPERATIONS_TOKEN
+        generateValue: true
+      - key: RF983_STATE_DB
+        value: /tmp/rf983-motion.sqlite3
+      - key: RF983_MAX_BODY_BYTES
+        value: "262144"
