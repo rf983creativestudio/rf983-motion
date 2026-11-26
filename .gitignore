@@ -5,3 +5,4 @@ __pycache__/
 models/
 outputs/
 *.mp4
+\n# Local model source, checkpoints and generated media (never commit these)\nthird_party/\nmodels/\nworker/renders/\n

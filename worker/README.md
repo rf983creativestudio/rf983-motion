@@ -1,42 +1,50 @@
-# RF983 MOTION local preflight worker (0.7)
+# RF983 MOTION local compute tools
 
-This is a **diagnostics-only agent**. It reports your local operating system, Python version, CPU count, free disk space, FFmpeg availability, NVIDIA tooling, and selected Python ML package availability to your RF983 MOTION API.
+This folder contains two separate tools:
 
-It does **not** download model weights, install CUDA/PyTorch, run inference, create videos, or enable generation.
+1. `worker.py` — lightweight diagnostics-only heartbeat agent for the RF983 API.
+2. `wan22_engine.py` — guarded local execution bridge for official Wan 2.2 TI2V-5B text-to-video inference on a compatible NVIDIA GPU.
 
-## Requirements
-- Python 3.11+
-- A running RF983 MOTION API reachable from this computer
-- The same private `RF983_WORKER_TOKEN` configured on the API and in this worker's local `.env`
+## Wan 2.2 local engine bridge
 
-The agent uses only Python's standard library.
+Read [Wan 2.2 engine setup](../docs/WAN22_ENGINE_SETUP.md) before installing anything.
 
-## Windows
-1. Start your API using the existing backend instructions.
-2. Open the `worker` folder.
-3. Double-click `start-windows.bat`.
-4. On first run, edit the created `.env` and paste the same secret used by the API.
-5. Start the batch file again. Keep its terminal open while you want diagnostics reported.
-
-## Linux / macOS
-1. Start the API.
-2. Copy `.env.example` to `.env` and edit the token/API URL.
-3. Run `sh start-unix.sh`.
-
-## One-shot report
-After creating the Python environment and setting the environment variables, run:
+Quick compatibility check (from this folder):
 
 ```sh
-python worker.py --once
+python wan22_engine.py --check
 ```
 
-## Security
-- Never commit your real `.env` file or share your worker token.
-- Keep the API bound to localhost or behind a trusted private network/VPN.
-- Do not expose the worker token in the browser frontend.
-- The API rejects missing or incorrect tokens.
-- The worker only sends heartbeat metadata; no prompts, project contents or reference images are sent.
-- Stop the worker process to stop reporting. The API marks its heartbeat stale after 45 seconds.
+Only attempt a render after the check reports `"ready": true`:
 
-## Current limitation
-A fresh worker heartbeat proves only that this diagnostics agent can reach the API. It does not prove model compatibility or rendering readiness. Generation stays disabled until a reviewed model adapter, verified weights, durable job handling, private render storage and successful render validation exist.
+```sh
+python wan22_engine.py --prompt "A cinematic tracking shot through a rain-soaked neon city at night" --size 1280*704
+```
+
+The bridge calls the official Wan repository's `generate.py`, uses model offload options, saves to `worker/renders`, and validates the MP4 with ffprobe. It does not download weights, install CUDA/PyTorch, call an online provider or upload creative data.
+
+**Hardware requirement:** Wan's official TI2V-5B guide specifies at least 24 GB NVIDIA VRAM for the single-GPU 720p path. Integrated Intel graphics and system RAM are not substitutes. The user's current Intel graphics laptop is not capable of this target.
+
+## Diagnostics-only API heartbeat agent
+
+This is a separate standard-library-only agent. It reports OS, Python version, CPU count, free disk, FFmpeg, NVIDIA tooling and selected Python package availability to the API. It never sends prompts, project contents or reference images.
+
+### Requirements
+- Python 3.11+
+- A running RF983 MOTION API reachable from this computer
+- The same private `RF983_WORKER_TOKEN` configured on the API and in `.env`
+
+### Windows
+1. Open the `worker` folder.
+2. Double-click `start-windows.bat`.
+3. Edit the created `.env` and set the same private token as the API.
+4. Run the batch file again and keep its terminal open.
+
+### Linux / macOS
+Copy `.env.example` to `.env`, configure the token/API URL, then run `sh start-unix.sh`.
+
+## Security
+- Never commit a real `.env` file or share worker tokens.
+- Keep the API on localhost or a trusted private network/VPN.
+- Do not expose the worker token in browser JavaScript.
+- Stop the heartbeat agent to stop reporting; the API marks it stale after 45 seconds.
