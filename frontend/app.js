@@ -81,7 +81,7 @@ async function refreshDiagnostics(){
    }else{
     const failed=privateResponses.find(r=>!r.ok);
     opsError=failed&&failed.status===401?"Operations token rejected. Check the server's RF983_OPERATIONS_TOKEN.":"Private operations are unavailable ("+(failed?failed.status:"unknown")+").";
-    renderWorkerHistory([]);
+    $("#worker-history-list").innerHTML='<div class="history-empty">Private worker history is locked. Check the operations token and refresh.</div>';
    }
   }else{
    $("#worker-history-list").innerHTML='<div class="history-empty">Private worker history is locked. Enter the operations token above to view stored reports.</div>';
