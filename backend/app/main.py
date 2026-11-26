@@ -86,7 +86,21 @@ def system_ready():
 @app.get("/api/capabilities")
 def capabilities():
     fresh=worker_fresh()
-    return {"api_version":APP_VERSION,"generation_enabled":False,"reason":"No verified inference adapter, durable queue, user authentication or private result storage is configured.","worker":{"connected":fresh,"worker_id":_worker["worker_id"] if fresh else None,"engine":_worker["engine"] if fresh else None,"engine_ready_reported":False,"capabilities":_worker["capabilities"] if fresh else [],"diagnostics":_worker["diagnostics"] if fresh else {},"supported_request_modes":["text","image"],"planned_features":["verified_model_adapters","durable_generation_jobs","reference_image_conditioning","private_result_storage","authenticated_project_sync"]}
+    return {
+        "api_version":APP_VERSION,
+        "generation_enabled":False,
+        "reason":"No verified inference adapter, durable queue, user authentication or private result storage is configured.",
+        "worker":{
+            "connected":fresh,
+            "worker_id":_worker["worker_id"] if fresh else None,
+            "engine":_worker["engine"] if fresh else None,
+            "engine_ready_reported":False,
+            "capabilities":_worker["capabilities"] if fresh else [],
+            "diagnostics":_worker["diagnostics"] if fresh else {}
+        },
+        "supported_request_modes":["text","image"],
+        "planned_features":["verified_model_adapters","durable_generation_jobs","reference_image_conditioning","private_result_storage","authenticated_project_sync"]
+    }
 
 @app.get("/api/models")
 def models():
