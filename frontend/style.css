@@ -24,3 +24,25 @@
 .shot-actions button:disabled{opacity:.3;cursor:not-allowed}
 .shot-actions button[data-duplicate-shot],.shot-actions button[data-move-up],.shot-actions button[data-move-down]{color:var(--accent)}
 @media(max-width:680px){.prompt-insights{grid-template-columns:1fr auto}.library-actions{width:100%}.library-toolbar{align-items:flex-start;gap:8px;flex-direction:column}}
+
+/* Build 0.6.0 — pre-production and delivery desk */
+.production-desk{margin-top:22px;padding:22px}
+.production-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px}
+.production-head h2{margin:4px 0 5px;font-size:22px;letter-spacing:-.7px}
+.production-head h2 i{font-family:Georgia,serif;font-weight:400;color:var(--accent)}
+.production-head p{margin:0;color:var(--muted);font-size:11px;max-width:590px}
+.production-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:20px 0}
+.production-metrics>div{padding:12px;background:#0c141b;border:1px solid var(--line);border-radius:8px;min-width:0}
+.production-metrics small{display:block;color:var(--muted);font-size:8px;letter-spacing:1px}
+.production-metrics b{display:block;margin-top:4px;font-size:19px;letter-spacing:-.4px}
+.production-checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.production-check{display:flex;gap:10px;align-items:flex-start;padding:10px 11px;border:1px solid var(--line);border-radius:7px;background:#0d151c;min-width:0}
+.production-check>span{display:grid;place-items:center;flex:0 0 19px;width:19px;height:19px;border-radius:50%;font-size:11px;font-weight:800;background:#1c3029;color:var(--accent)}
+.production-check.warn>span{background:#352d1e;color:#e5c17e}
+.production-check.risk>span{background:#392323;color:#e9a19a}
+.production-check.note>span{background:#1e2b36;color:#a8c9df}
+.production-check b{display:block;font-size:10px;margin-bottom:2px}
+.production-check small{display:block;color:var(--muted);font-size:9px;line-height:1.45}
+.production-exports{display:flex;gap:8px;flex-wrap:wrap;margin-top:17px}
+.production-footnote{display:block;margin-top:12px;color:var(--muted);font-size:9px;line-height:1.5}
+@media(max-width:720px){.production-head{flex-direction:column}.production-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.production-checks{grid-template-columns:1fr}.production-exports>*{flex:1 1 100%}.production-desk{padding:16px}}
