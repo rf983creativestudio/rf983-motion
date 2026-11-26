@@ -69,7 +69,8 @@ async function refreshDiagnostics(){
   const [health,worker,models,ready,history]=await Promise.all(responses.map(r=>r.json()));
   renderWorkerHistory(history.items||[]);
   const verified=models.verified_model_count||0;
-  const diag=worker.diagnostics||{};\n  const machineDetail=worker.connected?(diag.platform||"Local agent connected")+" · GPU: "+(diag.gpu_detected?(diag.gpu_detail||"Detected"):"not detected")+" · FFmpeg: "+(diag.tools&&diag.tools.ffmpeg?"yes":"no")+" · PyTorch: "+(diag.python_packages&&diag.python_packages.torch?"yes":"no"):"Start the local preflight agent to report hardware and software.";
+  const diag=worker.diagnostics||{};
+  const machineDetail=worker.connected?(diag.platform||"Local agent connected")+" · GPU: "+(diag.gpu_detected?(diag.gpu_detail||"Detected"):"not detected")+" · FFmpeg: "+(diag.tools&&diag.tools.ffmpeg?"yes":"no")+" · PyTorch: "+(diag.python_packages&&diag.python_packages.torch?"yes":"no"):"Start the local preflight agent to report hardware and software.";
   host.innerHTML=[
    row("API connection",health.service+" · version "+health.version,"CONNECTED","ready"),
    row("GPU worker",worker.connected?(worker.worker_id||"Worker online"):"No fresh heartbeat",worker.connected?"CONNECTED":"OFFLINE",worker.connected?"pending":"offline"),
