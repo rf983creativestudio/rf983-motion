@@ -84,7 +84,7 @@ async function refreshDiagnostics(){
     renderWorkerHistory([]);
    }
   }else{
-   renderWorkerHistory([]);
+   $("#worker-history-list").innerHTML='<div class="history-empty">Private worker history is locked. Enter the operations token above to view stored reports.</div>';
    opsError="Enter the private operations token to view machine diagnostics and worker history. The token is held only in this page's memory and is not saved.";
   }
   const verified=models.verified_model_count||0,diag=worker&&worker.diagnostics||{};
