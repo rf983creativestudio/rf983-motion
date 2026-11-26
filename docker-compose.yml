@@ -5,8 +5,11 @@ services:
       RF983_ALLOWED_ORIGINS: ${RF983_ALLOWED_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080}
       RF983_WORKER_TOKEN: ${RF983_WORKER_TOKEN:-}
       RF983_MAX_BODY_BYTES: ${RF983_MAX_BODY_BYTES:-262144}
+      RF983_STATE_DB: /app/runtime/rf983-motion.sqlite3
     ports: ["127.0.0.1:8000:8000"]
     restart: unless-stopped
+    volumes:
+      - rf983-motion-state:/app/runtime
     healthcheck:
       test: ["CMD","python","-c","import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')"]
       interval: 30s
@@ -19,3 +22,6 @@ services:
       api:
         condition: service_healthy
     restart: unless-stopped
+
+volumes:
+  rf983-motion-state:

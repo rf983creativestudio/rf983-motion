@@ -2,6 +2,14 @@
 
 RF983 MOTION is a private, self-hostable foundation for a cinematic AI video-generation workspace.
 
+## Build 0.8.0 — Persistent operations and diagnostics history
+- SQLite-backed worker preflight history, retained across API/container restarts when the Docker volume is kept.
+- Bounded history retention (latest 250 reports) and 1–50 record query limit.
+- Operations summary endpoint for uptime, worker state, history count and honest production-readiness state.
+- Model Lab worker history timeline showing report time, worker ID, GPU detection, FFmpeg, Python and free disk.
+- Docker named volume for persistent API state; no project prompts, images or videos are stored in this database.
+- Generation remains disabled: persistent diagnostics are not a render queue or inference engine.
+
 ## Build 0.7.0 — Local compute bridge and render contract
 - New standard-library-only local preflight agent for Windows, Linux and macOS.
 - Token-authenticated worker heartbeat with machine, GPU, FFmpeg, Python package and disk diagnostics.
@@ -71,6 +79,8 @@ uvicorn app.main:app --reload
 - `GET /api/models` — candidate model catalog; not a claim that weights are installed.
 - `GET /api/system/worker-preflight` — read-only environment diagnostics.
 - `GET /api/worker/status` — heartbeat freshness.
+- `GET /api/worker/history?limit=12` — latest persisted worker preflight reports (maximum 50 per request; 250 retained).
+- `GET /api/operations/summary` — operational summary and generation gate state.
 - `POST /api/worker/heartbeat` — authenticated worker heartbeat using `X-Worker-Token`.
 - `POST /api/generate` — deliberately returns 503 until inference is genuinely verified.
 

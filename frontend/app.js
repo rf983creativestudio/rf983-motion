@@ -45,6 +45,16 @@ function buildPrompt(){const parts=[];const subject=$("#subject").value.trim(),e
 function handleReference(file){if(!file)return;if(!["image/jpeg","image/png","image/webp"].includes(file.type)){toast("Choose a JPG, PNG or WEBP image.");return}if(file.size>MAX_IMAGE_BYTES){toast("Image is larger than 10 MB. Choose a smaller reference.");return}if(state.previewUrl)URL.revokeObjectURL(state.previewUrl);state.previewUrl=URL.createObjectURL(file);state.reference={name:file.name,type:file.type,size:file.size,url:state.previewUrl};$("#reference-thumb").src=state.previewUrl;$("#reference-name").textContent=file.name;$("#reference-size").textContent=(file.size/1024/1024).toFixed(2)+" MB · local preview only";$("#reference-preview").classList.remove("hidden");$("#drop-zone").classList.add("hidden");updateReadiness()}
 function clearReference(){if(state.previewUrl)URL.revokeObjectURL(state.previewUrl);state.previewUrl=null;state.reference=null;$("#reference-image").value="";$("#reference-preview").classList.add("hidden");$("#drop-zone").classList.remove("hidden");updateReadiness()}
 function addShot(){if(state.shots.length>=12){toast("This planner supports up to 12 shots per project.");return}state.shots.push({id:makeId(),name:"New shot",framing:"Wide",camera:"Locked-off",action:"Describe the visible action and the beat this shot should communicate.",duration:5});renderAll();renderShotEditor();scheduleDraftSave();toast("Shot added to storyboard.")}
+
+function renderWorkerHistory(items){
+ const host=$("#worker-history-list");if(!host)return;
+ if(!items.length){host.innerHTML='<div class="history-empty">No worker reports saved yet. Start the local preflight agent and refresh.</div>';return}
+ host.innerHTML=items.map(item=>{
+  const d=item.diagnostics||{},tools=d.tools||{},gpu=d.gpu_detected?"GPU detected":"No NVIDIA GPU reported";
+  const when=new Date(Number(item.observed_at)*1000),stamp=Number.isNaN(when.getTime())?"Unknown time":when.toLocaleString();
+  return '<article class="history-item"><div class="history-time"><b>'+escapeHtml(stamp)+'</b><small>'+escapeHtml(item.worker_id||"local worker")+'</small></div><div class="history-facts"><span>'+escapeHtml(gpu)+'</span><span>FFmpeg '+(tools.ffmpeg?"available":"missing")+'</span><span>Python '+escapeHtml(d.python||"unknown")+'</span><span>Disk '+escapeHtml(String(d.disk_free_gb??"—"))+' GB free</span></div></article>';
+ }).join("");
+}
 async function refreshDiagnostics(){
  const button=$("#refresh-diagnostics"),host=$("#diagnostic-results"),note=$("#diagnostic-note");
  let base=$("#api-base").value.trim();
@@ -53,10 +63,11 @@ async function refreshDiagnostics(){
  button.disabled=true;button.textContent="Checking…";note.textContent="Checking API health, worker and model registry…";
  const row=(name,detail,status,kind)=>'<div><span class="arch-dot '+kind+'"></span><b>'+escapeHtml(name)+'</b><small>'+escapeHtml(detail)+'</small><em>'+escapeHtml(status)+'</em></div>';
  try{
-  const paths=["/api/health","/api/worker/status","/api/models","/api/system/ready"];
+  const paths=["/api/health","/api/worker/status","/api/models","/api/system/ready","/api/worker/history?limit=12"];
   const responses=await Promise.all(paths.map(path=>fetch(base+path,{headers:{Accept:"application/json"},cache:"no-store"})));
   if(responses.some(r=>!r.ok))throw new Error("One or more API checks returned an error.");
-  const [health,worker,models,ready]=await Promise.all(responses.map(r=>r.json()));
+  const [health,worker,models,ready,history]=await Promise.all(responses.map(r=>r.json()));
+  renderWorkerHistory(history.items||[]);
   const verified=models.verified_model_count||0;
   const diag=worker.diagnostics||{};\n  const machineDetail=worker.connected?(diag.platform||"Local agent connected")+" · GPU: "+(diag.gpu_detected?(diag.gpu_detail||"Detected"):"not detected")+" · FFmpeg: "+(diag.tools&&diag.tools.ffmpeg?"yes":"no")+" · PyTorch: "+(diag.python_packages&&diag.python_packages.torch?"yes":"no"):"Start the local preflight agent to report hardware and software.";
   host.innerHTML=[
@@ -187,6 +198,7 @@ function bindEvents(){
 $$(".nav-item").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
 $$("[data-go]").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.go)));
 $("#refresh-diagnostics").addEventListener("click",refreshDiagnostics);
+$("#refresh-history").addEventListener("click",refreshDiagnostics);
 $("#run-production-check").addEventListener("click",()=>{renderProductionDesk();toast("Pre-production checks refreshed.")});
 $("#export-director-brief").addEventListener("click",exportDirectorBrief);
 $("#export-shot-csv").addEventListener("click",exportShotCsv);

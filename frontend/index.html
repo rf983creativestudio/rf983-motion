@@ -123,9 +123,14 @@
     </div>
     <small id="diagnostic-note" class="helper">The API must be running and allow this frontend origin. Local-only drafts stay in this browser.</small>
   </div>
+    <div class="panel architecture-panel history-panel" id="worker-history">
+      <div class="history-heading"><div><div class="eyebrow">PERSISTENT MACHINE RECORD / LAST 250 REPORTS</div><h2>Worker history</h2><p class="helper">Local API history survives restarts when the database volume is retained. Only machine preflight metadata is recorded.</p></div><button class="small-outline" id="refresh-history" type="button">Refresh history ↻</button></div>
+      <div class="history-list" id="worker-history-list" aria-live="polite"><div class="history-empty">Run a system check to load stored worker reports.</div></div>
+      <small class="helper" id="history-note">History is stored in the API local SQLite database. No prompts, project files or reference images are stored here.</small>
+    </div>
   <div class="panel reality-panel"><b>Zero-budget reality check</b><p>GitHub can store source code and host a static interface; it cannot run a cinematic video model. High-quality generation requires GPU time, model storage and bandwidth. We will keep the project private, avoid committing large weights or secrets, and only enable generation after a real worker and secure job pipeline are configured.</p></div>
 </section>
-<footer class="app-footer"><span>RF983 MOTION · BUILD 0.7.0</span><span>PRIVATE CREATIVE TECHNOLOGY PROJECT</span><span>DESIGNED FOR THE FRAME</span></footer>
+<footer class="app-footer"><span>RF983 MOTION · BUILD 0.8.0</span><span>PRIVATE CREATIVE TECHNOLOGY PROJECT</span><span>DESIGNED FOR THE FRAME</span></footer>
 </main>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>

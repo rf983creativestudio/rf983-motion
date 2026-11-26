@@ -10,7 +10,7 @@ def test_health_reports_inference_offline():
     response = client.get("/api/health")
     assert response.status_code == 200
     assert response.json()["inference"] == "offline"
-    assert response.json()["version"] == "0.7.0"
+    assert response.json()["version"] == "0.8.0"
 
 def test_capabilities_do_not_claim_generation():
     response = client.get("/api/capabilities")
@@ -85,3 +85,26 @@ def test_worker_status_hides_stale_diagnostics():
 def test_health_exposes_worker_protocol_version():
     data = client.get("/api/health").json()
     assert data["worker_agent_protocol"] == "0.7"
+
+
+def test_worker_heartbeat_is_persisted(monkeypatch,tmp_path):
+    monkeypatch.setattr("app.main.STATE_DB",str(tmp_path/"state.sqlite3"))
+    monkeypatch.setattr("app.main.WORKER_TOKEN","history-secret")
+    response=client.post("/api/worker/heartbeat",headers={"X-Worker-Token":"history-secret"},
+        json={"worker_id":"local-gpu-01","engine":"rf983-preflight-agent/0.7","diagnostics":{"gpu_detected":True,"gpu_detail":"Example GPU"}})
+    assert response.status_code==200
+    data=client.get("/api/worker/history?limit=5").json()
+    assert data["count"]==1 and data["items"][0]["worker_id"]=="local-gpu-01"
+    assert data["items"][0]["diagnostics"]["gpu_detected"] is True
+    assert data["generation_enabled"] is False
+
+def test_worker_history_rejects_invalid_limit():
+    response=client.get("/api/worker/history?limit=500")
+    assert response.status_code==422
+    assert response.json()["detail"]["code"]=="INVALID_HISTORY_LIMIT"
+
+def test_operations_summary_keeps_generation_disabled(monkeypatch,tmp_path):
+    monkeypatch.setattr("app.main.STATE_DB",str(tmp_path/"ops.sqlite3"))
+    data=client.get("/api/operations/summary").json()
+    assert data["api_version"]=="0.8.0" and data["persistent_state"]=="sqlite"
+    assert data["generation_enabled"] is False

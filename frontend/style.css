@@ -62,3 +62,14 @@
 .worker-setup-panel>a{font-size:11px;color:var(--accent);text-decoration:none}
 @media(max-width:760px){.worker-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.worker-setup-panel{padding:16px}}
 @media(max-width:420px){.worker-steps{grid-template-columns:1fr}.worker-safety-note{display:block}.worker-safety-note span{display:block;margin-top:5px}}
+
+/* Build 0.8.0 — persistent operations dashboard */
+.history-panel{margin-top:14px;padding:20px}
+.history-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.history-heading h2{margin:5px 0 4px}.history-heading p{margin:0 0 12px;max-width:660px}
+.history-list{display:grid;gap:8px;margin:12px 0}
+.history-item{display:grid;grid-template-columns:minmax(150px,.7fr) minmax(0,2fr);gap:14px;padding:12px;border:1px solid var(--line);background:#0d151c;border-radius:8px}
+.history-time b,.history-time small{display:block}.history-time b{font-size:10px}.history-time small{font-size:9px;color:var(--muted);margin-top:4px}
+.history-facts{display:flex;flex-wrap:wrap;gap:6px}.history-facts span{font-size:9px;color:#b9c8c4;border:1px solid #2b3d43;border-radius:20px;padding:5px 8px}
+.history-empty{padding:22px;border:1px dashed #344650;border-radius:8px;color:var(--muted);font-size:10px;text-align:center}
+@media(max-width:680px){.history-heading{flex-direction:column}.history-item{grid-template-columns:1fr;gap:8px}}
