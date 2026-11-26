@@ -70,6 +70,69 @@ async function refreshDiagnostics(){
   note.textContent="Check that the API is running, the address is correct, and CORS allows this frontend origin. "+error.message;
  }finally{button.disabled=false;button.textContent="Run system check ↻"}
 }
+let autosaveHandle=null;
+function scheduleDraftSave(){
+ clearTimeout(autosaveHandle);
+ const stateLabel=$("#save-state");
+ if(stateLabel)stateLabel.textContent="UNSAVED CHANGES";
+ autosaveHandle=setTimeout(()=>saveDraft(true),650);
+}
+function analyzePrompt(){
+ const value=$("#prompt").value.trim();
+ const words=value?value.split(/\s+/).filter(Boolean):[];
+ const checks=[
+  ["subject",/\b(person|woman|man|child|character|car|ship|building|animal|robot|astronaut|landscape|city|product|object)\b/i.test(value)],
+  ["action",/\b(walk|run|move|turn|look|rise|fall|fly|drive|flow|dance|open|close|approach|reveal|cross|drift|transform|build)\w*\b/i.test(value)],
+  ["setting",/\b(in|inside|outside|across|beneath|above|within|through|at|on)\b/i.test(value)],
+  ["camera",/\b(camera|close-up|wide shot|medium shot|tracking|pan|tilt|dolly|crane|orbit|push-in|pull-back|overhead|low angle)\b/i.test(value)],
+  ["light",/\b(light|lighting|sun|sunlight|moonlight|shadow|neon|backlit|golden hour|blue hour|volumetric|soft glow)\b/i.test(value)]
+ ];
+ const score=checks.filter(item=>item[1]).length;
+ $("#prompt-score").textContent=value?score+"/5 direction cues · "+words.length+" words":"Awaiting brief";
+ $("#prompt-advice").textContent=!value?"Start with a visible subject and one clear action.":score>=4?"Strong direction. Keep the action physically clear and consistent through time.":"Consider adding: "+checks.filter(item=>!item[1]).map(item=>item[0]).join(", ")+". This is a writing heuristic, not an AI evaluation.";
+}
+function validateImportedProject(raw){
+ if(!raw||typeof raw!=="object")throw new Error("Invalid project file.");
+ if(raw.format&&raw.format!=="rf983-motion-project")throw new Error("This is not an RF983 MOTION project export.");
+ const data=raw.project&&typeof raw.project==="object"?raw.project:raw;
+ if(typeof data.prompt!=="string"||data.prompt.length>4000)throw new Error("Project prompt is missing or too long.");
+ if(!Array.isArray(data.shots)||data.shots.length<1||data.shots.length>12)throw new Error("Project must contain between 1 and 12 shots.");
+ const clean={...data,shots:data.shots.map((shot,index)=>{
+  if(!shot||typeof shot!=="object")throw new Error("Invalid shot "+(index+1)+".");
+  return {id:makeId(),name:String(shot.name||"Shot "+(index+1)).slice(0,60),framing:String(shot.framing||"Wide").slice(0,40),camera:String(shot.camera||"Locked-off").slice(0,40),action:String(shot.action||"").slice(0,500),duration:Math.max(3,Math.min(15,Number(shot.duration)||5))};
+ })};
+ const limits={name:70,negativePrompt:1200,subject:300,environment:300,lighting:100,mood:100,model:40,aspect:10,resolution:10,duration:4,fps:3,quality:20,seed:12};
+ Object.keys(limits).forEach(key=>{if(clean[key]!==undefined)clean[key]=String(clean[key]).slice(0,limits[key])});
+ clean.audio=!!clean.audio;clean.refine=clean.refine!==false;clean.reference=null;
+ return clean;
+}
+function importProjectFile(file){
+ if(!file)return;
+ if(file.size>1024*1024){toast("Project file is too large. Maximum 1 MB.");return}
+ const reader=new FileReader();
+ reader.onload=()=>{
+  try{
+   const project=validateImportedProject(JSON.parse(String(reader.result||"")));
+   applyForm(project);clearReference();saveDraft(true);setView("studio");
+   toast("Project imported. Re-select its reference image if needed.");
+  }catch(error){toast(error.message||"Could not import this project file.")}
+ };
+ reader.onerror=()=>toast("Could not read the selected project file.");
+ reader.readAsText(file);
+}
+function moveShot(id,delta){
+ const index=state.shots.findIndex(shot=>shot.id===id),target=index+delta;
+ if(index<0||target<0||target>=state.shots.length)return;
+ [state.shots[index],state.shots[target]]=[state.shots[target],state.shots[index]];
+ renderAll();renderShotEditor();scheduleDraftSave();
+}
+function duplicateShot(id){
+ if(state.shots.length>=12){toast("Maximum 12 shots per project.");return}
+ const index=state.shots.findIndex(shot=>shot.id===id);if(index<0)return;
+ const copy={...state.shots[index],id:makeId(),name:(state.shots[index].name+" copy").slice(0,60)};
+ state.shots.splice(index+1,0,copy);renderAll();renderShotEditor();scheduleDraftSave();toast("Shot duplicated.");
+}
+
 function bindEvents(){
 $$(".nav-item").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
 $$("[data-go]").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.go)));
