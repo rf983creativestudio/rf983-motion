@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#090d12">
+<meta name="description" content="RF983 MOTION — private cinematic AI video studio prototype.">
+<title>RF983 MOTION — AI Video Studio</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="shell">
+<aside class="rail"><div class="brand"><span class="brand-mark">R</span><span>RF983 <b>MOTION</b></span></div><div class="rail-label">WORKSPACE</div><a class="nav active" href="#">✦ <span>Studio</span></a><a class="nav" href="#library">▤ <span>My creations</span></a><a class="nav" href="#models">◈ <span>Models</span></a><div class="rail-bottom"><span class="status-dot"></span> Private prototype</div></aside>
+<main>
+<header><div><div class="eyebrow">CREATIVE INTELLIGENCE / 001</div><h1>Make the impossible <em>move.</em></h1><p class="sub">A cinematic workspace for ideas that deserve more than a prompt box.</p></div><div class="avatar">RF</div></header>
+<section class="studio-grid">
+<div class="composer panel"><div class="panel-top"><div><span class="eyebrow">NEW GENERATION</span><h2>Describe your scene</h2></div><span class="pill">PRIVATE BUILD</span></div>
+<label for="prompt">YOUR CREATIVE BRIEF</label><textarea id="prompt" maxlength="1800" placeholder="A lone explorer walks through a vast black-sand desert at blue hour. A colossal ringed planet rises over the horizon. Slow anamorphic push-in, wind lifting fine volcanic dust, photorealistic textures..."></textarea>
+<div class="prompt-foot"><span id="count">0 / 1800</span><button id="enhance" class="quiet">✧ Prompt guide</button></div>
+<div class="upload-row"><div><b>Visual reference</b><small>Optional image input · JPG / PNG / WEBP</small></div><label class="upload" for="image">＋ Add image</label><input id="image" type="file" accept="image/png,image/jpeg,image/webp" hidden></div><div id="preview" class="preview hidden"></div>
+<div class="controls"><div><label for="mode">GENERATION MODE</label><select id="mode"><option value="text">Text to video</option><option value="image">Image to video</option></select></div><div><label for="aspect">ASPECT RATIO</label><select id="aspect"><option>16:9</option><option>9:16</option><option>1:1</option></select></div><div><label for="duration">DURATION</label><select id="duration"><option value="5">5 seconds</option><option value="8">8 seconds</option><option value="10">10 seconds</option></select></div><div><label for="quality">QUALITY PROFILE</label><select id="quality"><option value="max">Maximum detail (planned)</option><option value="draft">Draft preview (planned)</option></select></div></div>
+<button id="generate" class="generate"><span>✦</span> Generate video <span class="arrow">↗</span></button><p id="notice" class="notice" role="status">Generation engine is not connected. This prototype does not submit or store your prompt.</p>
+</div>
+<div class="side-stack"><div class="preview-card panel"><div class="eyebrow">THE RF983 STANDARD</div><div class="art"><div class="orb"></div><div class="horizon"></div><div class="art-caption">IMAGINATION<br><b>IN MOTION</b></div><div class="art-code">CINEMA / 001</div></div><h3>Built for the big picture.</h3><p>A workflow focused on composition, movement, continuity and cinematic intent.</p></div>
+<div class="panel model-panel" id="models"><div class="eyebrow">MODEL ROADMAP</div><div class="model-line"><span class="model-icon">W</span><div><b>Wan family</b><small>Candidate · evaluate checkpoint + license</small></div><span class="model-state">RESEARCH</span></div><div class="model-line"><span class="model-icon">L</span><div><b>LTX family</b><small>Evaluate release + hardware needs</small></div><span class="model-state">RESEARCH</span></div></div></div>
+</section>
+<section class="bottom panel" id="library"><div><div class="eyebrow">YOUR WORKSPACE</div><h2>Creation history</h2></div><div class="empty"><span>◌</span><b>Your first film starts here.</b><small>History appears after a secure generation service is connected.</small></div></section>
+<footer>RF983 MOTION <span>PRIVATE CREATIVE TECHNOLOGY PROJECT</span><span>BUILD 0.1.0</span></footer>
+</main></div><script src="app.js"></script></body></html>
