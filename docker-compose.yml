@@ -4,6 +4,7 @@ services:
     environment:
       RF983_ALLOWED_ORIGINS: ${RF983_ALLOWED_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080}
       RF983_WORKER_TOKEN: ${RF983_WORKER_TOKEN:-}
+      RF983_OPERATIONS_TOKEN: ${RF983_OPERATIONS_TOKEN:-}
       RF983_MAX_BODY_BYTES: ${RF983_MAX_BODY_BYTES:-262144}
       RF983_STATE_DB: /app/runtime/rf983-motion.sqlite3
     ports: ["127.0.0.1:8000:8000"]
