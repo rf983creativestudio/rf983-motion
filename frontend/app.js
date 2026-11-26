@@ -57,10 +57,12 @@ async function refreshDiagnostics(){
   const responses=await Promise.all(paths.map(path=>fetch(base+path,{headers:{Accept:"application/json"},cache:"no-store"})));
   if(responses.some(r=>!r.ok))throw new Error("One or more API checks returned an error.");
   const [health,worker,models,ready]=await Promise.all(responses.map(r=>r.json()));
-  const verified=models.verified_model_count||0;\n  const diag=worker.diagnostics||{};\n  const machineDetail=worker.connected?(diag.platform||"Local agent connected")+" · GPU: "+(diag.gpu_detected?(diag.gpu_detail||"Detected"):"not detected")+" · FFmpeg: "+(diag.tools&&diag.tools.ffmpeg?"yes":"no")+" · PyTorch: "+(diag.python_packages&&diag.python_packages.torch?"yes":"no"):"Start the local preflight agent to report hardware and software.";
+  const verified=models.verified_model_count||0;
+  const diag=worker.diagnostics||{};\n  const machineDetail=worker.connected?(diag.platform||"Local agent connected")+" · GPU: "+(diag.gpu_detected?(diag.gpu_detail||"Detected"):"not detected")+" · FFmpeg: "+(diag.tools&&diag.tools.ffmpeg?"yes":"no")+" · PyTorch: "+(diag.python_packages&&diag.python_packages.torch?"yes":"no"):"Start the local preflight agent to report hardware and software.";
   host.innerHTML=[
    row("API connection",health.service+" · version "+health.version,"CONNECTED","ready"),
-   row("GPU worker",worker.connected?(worker.worker_id||"Worker online"):"No fresh heartbeat",worker.connected?"CONNECTED":"OFFLINE",worker.connected?"pending":"offline"),\n   row("Machine preflight",machineDetail,diag.gpu_detected?"GPU DETECTED":worker.connected?"AGENT ONLINE":"WAITING",diag.gpu_detected?"pending":worker.connected?"ready":"offline"),
+   row("GPU worker",worker.connected?(worker.worker_id||"Worker online"):"No fresh heartbeat",worker.connected?"CONNECTED":"OFFLINE",worker.connected?"pending":"offline"),
+   row("Machine preflight",machineDetail,diag.gpu_detected?"GPU DETECTED":worker.connected?"AGENT ONLINE":"WAITING",diag.gpu_detected?"pending":worker.connected?"ready":"offline"),
    row("Verified models",verified+" verified · "+models.models.length+" candidates",verified?"VERIFIED":"NONE",verified?"ready":"offline"),
    row("Generation pipeline",ready.generation_reason||"Not enabled",ready.generation_enabled?"ENABLED":"DISABLED",ready.generation_enabled?"ready":"offline")
   ].join("");
