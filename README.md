@@ -2,6 +2,22 @@
 
 RF983 MOTION is a private, self-hostable foundation for a cinematic AI video-generation workspace.
 
+## Build 0.7.0 — Local compute bridge and render contract
+- New standard-library-only local preflight agent for Windows, Linux and macOS.
+- Token-authenticated worker heartbeat with machine, GPU, FFmpeg, Python package and disk diagnostics.
+- Model Lab setup guide and live display of local machine preflight results.
+- Strict engine adapter Protocol and render artifact validator: output-root containment, MP4 extension, non-empty file, size cap and ffprobe video-stream verification.
+- Worker contract tests added to GitHub Actions.
+- The worker is diagnostics-only. It does not install models or generate video; generation remains disabled.
+
+## Connect a local worker
+1. Start the API as described below and configure a strong `RF983_WORKER_TOKEN` in the root `.env`.
+2. Copy `worker/.env.example` to `worker/.env` and use the same token. Keep both files private; they are git-ignored.
+3. On Windows, run `worker/start-windows.bat`. On Linux/macOS, run `sh worker/start-unix.sh`.
+4. Open Model Lab and run the system check. A fresh worker heartbeat should show machine diagnostics.
+
+See [worker setup](worker/README.md) and [engine adapter contract](docs/ENGINE_ADAPTER_CONTRACT.md).
+
 ## Build 0.6.0 — Production desk and handoff exports
 - Local pre-production audit for project identity, brief depth, shot actions, duplicate shot names, camera variety, negative prompt and reference-image status.
 - Live planning metrics: shot count, storyboard runtime, frame estimate from runtime × target FPS, and checklist score.
