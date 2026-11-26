@@ -77,6 +77,13 @@
   <div class="page-heading"><div><div class="eyebrow">DIRECTOR'S WORKSPACE / 02</div><h1>Build the <i>sequence.</i></h1><p>Break the film into deliberate shots. Set the framing, movement and action for every beat.</p></div><button class="primary-button" id="add-shot">＋ Add shot</button></div>
   <div class="storyboard-toolbar panel"><div><b>Shot list</b><span id="storyboard-total">3 shots · 15 seconds planned</span></div><button class="small-outline" id="reset-shots">Reset sequence</button></div>
   <div class="shot-editor-list" id="shot-editor-list"></div>
+  <section class="panel production-desk" aria-labelledby="production-title">
+    <div class="production-head"><div><div class="eyebrow">PRE-PRODUCTION / DELIVERY KIT</div><h2 id="production-title">Production <i>desk.</i></h2><p>Check the creative brief and export a handoff pack for production. These checks are local planning aids, not model validation.</p></div><button class="small-outline" id="run-production-check">Run checks ↻</button></div>
+    <div class="production-metrics"><div><small>PLANNED SHOTS</small><b id="prod-shots">3</b></div><div><small>RUNTIME</small><b id="prod-runtime">15s</b></div><div><small>EST. FRAMES</small><b id="prod-frames">360</b></div><div><small>BRIEF SCORE</small><b id="prod-score">—</b></div></div>
+    <div class="production-checks" id="production-checks" aria-live="polite"></div>
+    <div class="production-exports"><button class="primary-button" id="export-director-brief">Export director brief ↓</button><button class="small-outline" id="export-shot-csv">Export shot CSV ↓</button><button class="small-outline" id="export-production-json">Export production JSON ↓</button></div>
+    <small class="production-footnote">Exports contain text and planning metadata only. Reference image files are not embedded. Estimated frames = planned seconds × selected FPS; actual model output may differ.</small>
+  </section>
   <div class="panel sequence-note"><div><span class="eyebrow">SEQUENCE NOTE</span><h3>Think in visual continuity.</h3><p>Keep subject identity, screen direction, lighting logic and geography consistent between adjacent shots. Duration is a planning estimate; the connected model may impose different frame limits.</p></div><div class="sequence-stat"><b id="sequence-duration">15s</b><small>PLANNED RUNTIME</small></div></div>
 </section>
 <section class="view" id="view-library">
@@ -105,7 +112,7 @@
   </div>
   <div class="panel reality-panel"><b>Zero-budget reality check</b><p>GitHub can store source code and host a static interface; it cannot run a cinematic video model. High-quality generation requires GPU time, model storage and bandwidth. We will keep the project private, avoid committing large weights or secrets, and only enable generation after a real worker and secure job pipeline are configured.</p></div>
 </section>
-<footer class="app-footer"><span>RF983 MOTION · BUILD 0.5.0</span><span>PRIVATE CREATIVE TECHNOLOGY PROJECT</span><span>DESIGNED FOR THE FRAME</span></footer>
+<footer class="app-footer"><span>RF983 MOTION · BUILD 0.6.0</span><span>PRIVATE CREATIVE TECHNOLOGY PROJECT</span><span>DESIGNED FOR THE FRAME</span></footer>
 </main>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
