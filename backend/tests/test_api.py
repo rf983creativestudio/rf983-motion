@@ -92,6 +92,7 @@ def test_health_exposes_worker_protocol_version():
 def test_worker_heartbeat_is_persisted(monkeypatch,tmp_path):
     monkeypatch.setattr("app.main.STATE_DB",str(tmp_path/"state.sqlite3"))
     monkeypatch.setattr("app.main.WORKER_TOKEN","history-secret")
+    monkeypatch.setattr("app.main.OPERATIONS_TOKEN","ops-secret")
     response=client.post("/api/worker/heartbeat",headers={"X-Worker-Token":"history-secret"},
         json={"worker_id":"local-gpu-01","engine":"rf983-preflight-agent/0.7","diagnostics":{"gpu_detected":True,"gpu_detail":"Example GPU"}})
     assert response.status_code==200
