@@ -40,7 +40,7 @@ function renderShotEditor(){
 function options(values,selected,labeler){return values.map(v=>'<option value="'+escapeHtml(v)+'" '+(String(v)===String(selected)?"selected":"")+'>'+escapeHtml(labeler?labeler(v):v)+'</option>').join("")}
 function renderLibrary(){const projects=getProjects();$("#library-count").textContent=projects.length+" projects";const host=$("#library-grid");if(!projects.length){host.innerHTML='<div class="empty-library"><div style="font-size:28px">▧</div><b>Your creative library is waiting.</b><small>Save a project draft to keep it in this browser, or export a portable JSON project file.</small></div>';return}host.innerHTML=projects.map(p=>'<article class="library-card"><div class="library-art">RF983 / '+escapeHtml(p.aspect||"16:9")+'</div><h3>'+escapeHtml(p.name)+'</h3><p>'+escapeHtml((p.prompt||"No creative brief yet").slice(0,110))+'</p><div class="library-card-footer"><small>'+new Date(p.updatedAt||Date.now()).toLocaleDateString()+' · '+(p.shots||[]).length+' shots</small><button data-load-project="'+escapeHtml(p.id)+'">Open draft ↗</button></div></article>').join("")}
 function updateReadiness(){const prompt=$("#prompt").value.trim();const essentials=[!!prompt,state.shots.length>0,true];const ready=essentials.filter(Boolean).length;$("#check-prompt").textContent=essentials[0]?"●":"○";$("#check-prompt-label").textContent=essentials[0]?"Ready":"Missing";$("#check-shots").textContent=essentials[1]?"●":"○";$("#check-shots-label").textContent=state.shots.length+" shots";$("#check-reference").textContent=state.reference?"●":"○";$("#check-reference-label").textContent=state.reference?"Added":"Optional";$("#readiness-fill").style.width=(ready/3*100)+"%";$("#readiness-text").textContent=ready+" of 3 essentials ready"}
-function renderAll(){renderShots();updateReadiness();$("#prompt-count").textContent=$("#prompt").value.length+" / 4000";analyzePrompt();if(state.activeView==="storyboard")renderShotEditor()}
+function renderAll(){renderShots();updateReadiness();$("#prompt-count").textContent=$("#prompt").value.length+" / 4000";analyzePrompt();renderProductionDesk();if(state.activeView==="storyboard")renderShotEditor()}
 function buildPrompt(){const parts=[];const subject=$("#subject").value.trim(),environment=$("#environment").value.trim(),lighting=$("#lighting").value,mood=$("#mood").value;if(subject)parts.push(subject);if(environment)parts.push("Set in "+environment+".");if(lighting)parts.push(lighting+".");if(mood)parts.push("Mood: "+mood.toLowerCase()+".");const current=$("#prompt").value.trim();const addition=parts.join(" ");if(!addition){toast("Add at least one director's note first.");return}$("#prompt").value=[current,addition].filter(Boolean).join(current?" ":"");$("#prompt").dispatchEvent(new Event("input"));toast("Director's notes added to the master prompt.")}
 function handleReference(file){if(!file)return;if(!["image/jpeg","image/png","image/webp"].includes(file.type)){toast("Choose a JPG, PNG or WEBP image.");return}if(file.size>MAX_IMAGE_BYTES){toast("Image is larger than 10 MB. Choose a smaller reference.");return}if(state.previewUrl)URL.revokeObjectURL(state.previewUrl);state.previewUrl=URL.createObjectURL(file);state.reference={name:file.name,type:file.type,size:file.size,url:state.previewUrl};$("#reference-thumb").src=state.previewUrl;$("#reference-name").textContent=file.name;$("#reference-size").textContent=(file.size/1024/1024).toFixed(2)+" MB · local preview only";$("#reference-preview").classList.remove("hidden");$("#drop-zone").classList.add("hidden");updateReadiness()}
 function clearReference(){if(state.previewUrl)URL.revokeObjectURL(state.previewUrl);state.previewUrl=null;state.reference=null;$("#reference-image").value="";$("#reference-preview").classList.add("hidden");$("#drop-zone").classList.remove("hidden");updateReadiness()}
@@ -133,10 +133,62 @@ function duplicateShot(id){
  state.shots.splice(index+1,0,copy);renderAll();renderShotEditor();scheduleDraftSave();toast("Shot duplicated.");
 }
 
+function productionAudit(){
+ const data=readForm(),words=data.prompt.trim()?data.prompt.trim().split(/\\s+/).length:0;
+ const checks=[];
+ const add=(level,label,detail)=>checks.push({level,label,detail});
+ add(data.name&&data.name!=="Untitled cinematic project"?"good":"warn","Project identity",data.name&&data.name!=="Untitled cinematic project"?"Project has a descriptive title.":"Give this project a distinctive name before handoff.");
+ add(words>=30?"good":words>=10?"warn":"risk","Creative brief",words+" words. "+(words>=30?"Enough detail for a useful first handoff.":"Expand the prompt with subject, action, setting, camera and lighting."));
+ const blankShots=data.shots.filter(x=>!String(x.action||"").trim()).length;
+ add(blankShots===0?"good":"warn","Shot actions",blankShots===0?"Every shot has a visible action or beat.":blankShots+" shot(s) need a defined action.");
+ const names=data.shots.map(x=>String(x.name||"").trim().toLowerCase());
+ const duplicates=names.filter((x,i)=>x&&names.indexOf(x)!==i);
+ add(duplicates.length?"warn":"good","Shot naming",duplicates.length?"Repeated shot titles found; rename them to make handoff clearer.":"Shot titles are distinct.");
+ const repeated=data.shots.length>1&&data.shots.every(x=>x.camera===data.shots[0].camera);
+ add(repeated?"warn":"good","Camera variety",repeated?"Every shot uses the same camera movement. Check whether that is intentional.":"Camera movement varies or the sequence is a single shot.");
+ add(data.negativePrompt.trim()?"good":"note","Negative prompt",data.negativePrompt.trim()?"A negative prompt is included.":"Optional: add exclusions if the selected model supports them.");
+ add(data.reference?"good":"note","Visual reference",data.reference?"Reference file selected: "+data.reference.name+". The file itself is not included in exports.":"No reference image selected. This is optional, but remember to share it separately.");
+ add(data.shots.length<=12?"good":"risk","Sequence limits",data.shots.length+" shots in the storyboard.");
+ return {data,checks,words,frames:Math.round(Number(data.duration||5)*Number(data.fps||24)*Math.max(1,data.shots.length)),runtime:totalDuration()};
+}
+function renderProductionDesk(){
+ const audit=productionAudit();
+ $("#prod-shots").textContent=audit.data.shots.length;
+ $("#prod-runtime").textContent=audit.runtime+"s";
+ $("#prod-frames").textContent=(audit.runtime*Number(audit.data.fps||24)).toLocaleString();
+ $("#prod-score").textContent=audit.checks.filter(x=>x.level==="good").length+"/"+audit.checks.length;
+ $("#production-checks").innerHTML=audit.checks.map(item=>'<div class="production-check '+item.level+'"><span>'+({good:"✓",warn:"!",risk:"×",note:"i"}[item.level])+'</span><div><b>'+escapeHtml(item.label)+'</b><small>'+escapeHtml(item.detail)+'</small></div></div>').join("");
+}
+function exportDirectorBrief(){
+ const a=productionAudit(),d=a.data;
+ const lines=["# "+d.name,"","## Production overview","- Planned shots: "+d.shots.length,"- Planned runtime: "+a.runtime+" seconds","- Frame rate target: "+d.fps+" fps","- Estimated frames: "+(a.runtime*Number(d.fps||24))+" (planning estimate only)","- Aspect ratio: "+d.aspect,"- Resolution target: "+d.resolution,"- Quality profile: "+d.quality,"- Model route: "+d.model,"- Audio requested: "+(d.audio?"Yes":"No"),"","## Creative brief",d.prompt||"_No prompt supplied._","","## Negative prompt",d.negativePrompt||"_None supplied._","","## Director's notes","- Subject: "+(d.subject||"Not specified"),"- Environment: "+(d.environment||"Not specified"),"- Lighting: "+(d.lighting||"Not specified"),"- Mood: "+(d.mood||"Not specified"),"","## Shot-by-shot plan"];
+ d.shots.forEach((shot,i)=>lines.push("### "+String(i+1).padStart(2,"0")+". "+shot.name,"- Duration: "+shot.duration+" seconds","- Framing: "+shot.framing,"- Camera: "+shot.camera,"- Action: "+(shot.action||"Not specified")));
+ lines.push("","## Pre-production checks",...a.checks.map(x=>"- ["+(x.level==="good"?"x":x.level==="risk"?"!":" ")+"] "+x.label+": "+x.detail),"","## Handoff notes","- This document is a creative handoff, not a render or model execution report.","- Re-attach any reference image separately; project exports do not embed image bytes.","- Actual output length, frame count and supported settings depend on the connected model and render pipeline.","","Generated by RF983 MOTION 0.6.0.");
+ downloadBlob(new Blob([lines.join("\n")],{type:"text/markdown;charset=utf-8"}),fileSlug(d.name)+"-director-brief.md");
+ toast("Director brief exported.");
+}
+function fileSlug(value){return String(value||"rf983-project").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,60)||"rf983-project"}
+function exportShotCsv(){
+ const d=readForm(),rows=[["Shot","Title","Duration (seconds)","Framing","Camera movement","Visible action"]];
+ d.shots.forEach((x,i)=>rows.push([i+1,x.name,x.duration,x.framing,x.camera,x.action]));
+ const csv=rows.map(row=>row.map(value=>'"'+String(value??"").replace(/"/g,'""')+'"').join(",")).join("\r\n");
+ downloadBlob(new Blob(["\\ufeff",csv],{type:"text/csv;charset=utf-8"}),fileSlug(d.name)+"-shot-list.csv");
+ toast("Shot list CSV exported.");
+}
+function exportProductionJson(){
+ const a=productionAudit(),payload={format:"rf983-motion-production-pack",version:1,generatedAt:new Date().toISOString(),project:a.data,production:{plannedRuntimeSeconds:a.runtime,targetFps:Number(a.data.fps||24),estimatedFrames:a.runtime*Number(a.data.fps||24),checks:a.checks}};
+ downloadBlob(new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}),fileSlug(a.data.name)+"-production-pack.json");
+ toast("Production JSON exported.");
+}
+
 function bindEvents(){
 $$(".nav-item").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
 $$("[data-go]").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.go)));
 $("#refresh-diagnostics").addEventListener("click",refreshDiagnostics);
+$("#run-production-check").addEventListener("click",()=>{renderProductionDesk();toast("Pre-production checks refreshed.")});
+$("#export-director-brief").addEventListener("click",exportDirectorBrief);
+$("#export-shot-csv").addEventListener("click",exportShotCsv);
+$("#export-production-json").addEventListener("click",exportProductionJson);
 $("#import-project").addEventListener("click",()=>$("#import-file").click());
 $("#import-library").addEventListener("click",()=>$("#import-file").click());
 $("#import-file").addEventListener("change",e=>{importProjectFile(e.target.files&&e.target.files[0]);e.target.value="";});
