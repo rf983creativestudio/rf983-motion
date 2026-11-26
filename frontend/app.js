@@ -134,7 +134,7 @@ function duplicateShot(id){
 }
 
 function productionAudit(){
- const data=readForm(),words=data.prompt.trim()?data.prompt.trim().split(/\\s+/).length:0;
+ const data=readForm(),words=data.prompt.trim()?data.prompt.trim().split(/\s+/).length:0;
  const checks=[];
  const add=(level,label,detail)=>checks.push({level,label,detail});
  add(data.name&&data.name!=="Untitled cinematic project"?"good":"warn","Project identity",data.name&&data.name!=="Untitled cinematic project"?"Project has a descriptive title.":"Give this project a distinctive name before handoff.");
@@ -172,7 +172,7 @@ function exportShotCsv(){
  const d=readForm(),rows=[["Shot","Title","Duration (seconds)","Framing","Camera movement","Visible action"]];
  d.shots.forEach((x,i)=>rows.push([i+1,x.name,x.duration,x.framing,x.camera,x.action]));
  const csv=rows.map(row=>row.map(value=>'"'+String(value??"").replace(/"/g,'""')+'"').join(",")).join("\r\n");
- downloadBlob(new Blob(["\\ufeff",csv],{type:"text/csv;charset=utf-8"}),fileSlug(d.name)+"-shot-list.csv");
+ downloadBlob(new Blob(["\uFEFF",csv],{type:"text/csv;charset=utf-8"}),fileSlug(d.name)+"-shot-list.csv");
  toast("Shot list CSV exported.");
 }
 function exportProductionJson(){
