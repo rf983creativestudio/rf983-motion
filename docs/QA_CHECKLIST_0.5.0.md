@@ -1,37 +1,34 @@
-# RF983 MOTION 0.5.0 — manual acceptance checklist
+# RF983 MOTION 0.6.0 — Production desk acceptance checklist
 
-This release adds browser-side workflow features. Run this checklist in a real browser
-after serving the frontend (preferably with the included local Docker Compose stack).
+Run these checks in a real browser after serving the frontend.
 
-## Studio
-- [ ] Enter a prompt and confirm the prompt count updates.
-- [ ] Confirm prompt direction cues update as the prompt changes.
-- [ ] Change every film setting and confirm the local draft survives a page reload.
-- [ ] Confirm the autosave indicator changes from unsaved to saved.
-- [ ] Select a reference image and confirm it is previewed locally.
-- [ ] Confirm reference image bytes are not embedded in project JSON exports.
+## Production audit
+- [ ] Open Storyboard and confirm shot count, planned runtime, estimated frames and brief score appear.
+- [ ] Change target FPS and confirm estimated frames update.
+- [ ] Change a shot duration and confirm runtime and frame estimate update.
+- [ ] Confirm warnings appear for a generic project title, short prompt, blank shot actions, duplicate shot names and identical camera movements.
+- [ ] Confirm missing negative prompt and reference image are marked optional rather than fatal.
+- [ ] Confirm audit output is refreshed after editing and with the Run checks button.
 
-## Storyboard
-- [ ] Add shots up to the 12-shot limit; confirm the limit is enforced.
-- [ ] Duplicate a shot and verify its values are copied with a new identity.
-- [ ] Move shots up and down and confirm the sequence timeline changes order.
-- [ ] Change shot durations and confirm total runtime and timeline segment proportions update.
-- [ ] Remove a shot and confirm at least one shot remains.
+## Director brief export
+- [ ] Export the director brief Markdown file.
+- [ ] Confirm it includes creative brief, settings, director notes, every shot, planned runtime, frame estimate, checks and handoff limitations.
+- [ ] Confirm reference image bytes are not embedded and the brief tells the recipient to share the image separately.
 
-## Project portability
-- [ ] Export a project JSON file.
-- [ ] Import the exported file and confirm its prompt, settings and shots are restored.
-- [ ] Confirm the imported reference image is not restored and must be selected again.
-- [ ] Try a non-JSON file, oversized file, invalid project, and a project with 13 shots; each must fail safely.
-- [ ] Confirm imports are limited to 1 MB and shot content is bounded.
+## Shot CSV export
+- [ ] Export the shot CSV.
+- [ ] Open it in a spreadsheet and verify columns, Unicode text, commas and quotation marks are preserved.
+- [ ] Confirm each shot appears once and in storyboard order.
 
-## API and inference boundary
-- [ ] Confirm Model Lab diagnostics work against a running API with correct CORS.
-- [ ] Confirm the API remains generation-disabled without a verified model adapter and a successful render.
-- [ ] Confirm no prompt or image is uploaded when the Generate button is clicked while inference is offline.
+## Structured production JSON
+- [ ] Export production JSON.
+- [ ] Confirm it parses as JSON and contains project data, generated timestamp, runtime, target FPS, estimated frames and audit checks.
+- [ ] Confirm no image data or remote upload is involved.
+
+## Safety and claims
+- [ ] Confirm all exports are generated locally in the browser.
+- [ ] Confirm estimates are labeled as planning estimates and not actual model output.
+- [ ] Confirm generation remains disabled until a verified inference adapter and required production infrastructure exist.
 
 ## Verification status
-
-The GitHub repository update confirms source files were committed and retrieved. This
-checklist has not yet been executed in a real browser or CI runner; do not treat it as
-a passed test report.
+Source files were committed and retrieved from GitHub. This checklist is a manual test plan and has not been executed in a real browser. Do not treat it as a passed test report.
