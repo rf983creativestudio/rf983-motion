@@ -10,7 +10,7 @@ def test_health_reports_inference_offline():
     response = client.get("/api/health")
     assert response.status_code == 200
     assert response.json()["inference"] == "offline"
-    assert response.json()["version"] == "0.8.0"
+    assert response.json()["version"] == "0.9.0"
 
 def test_capabilities_do_not_claim_generation():
     response = client.get("/api/capabilities")
@@ -62,8 +62,9 @@ def test_model_catalog_is_honest():
     assert all(model["status"] == "candidate" for model in data["models"])
     assert all(model["weights_present"] is False for model in data["models"])
 
-def test_worker_preflight_does_not_claim_ready():
-    data = client.get("/api/system/worker-preflight").json()
+def test_worker_preflight_does_not_claim_ready(monkeypatch):
+    monkeypatch.setattr("app.main.OPERATIONS_TOKEN","ops-secret")
+    data = client.get("/api/system/worker-preflight",headers={"X-Operations-Token":"ops-secret"}).json()
     assert data["generation_ready"] is False
     assert "gpu" in data
     assert "python_packages" in data
@@ -74,10 +75,11 @@ def test_security_headers_present():
     assert response.headers["x-frame-options"] == "DENY"
 
 
-def test_worker_status_hides_stale_diagnostics():
+def test_worker_status_hides_stale_diagnostics(monkeypatch):
     from app.main import _worker
+    monkeypatch.setattr("app.main.OPERATIONS_TOKEN","ops-secret")
     _worker.update(connected=True, last_seen=0, diagnostics={"gpu_detected": True})
-    data = client.get("/api/worker/status").json()
+    data = client.get("/api/worker/status",headers={"X-Operations-Token":"ops-secret"}).json()
     assert data["connected"] is False
     assert data["diagnostics"] == {}
 
@@ -105,6 +107,32 @@ def test_worker_history_rejects_invalid_limit():
 
 def test_operations_summary_keeps_generation_disabled(monkeypatch,tmp_path):
     monkeypatch.setattr("app.main.STATE_DB",str(tmp_path/"ops.sqlite3"))
-    data=client.get("/api/operations/summary").json()
-    assert data["api_version"]=="0.8.0" and data["persistent_state"]=="sqlite"
+    monkeypatch.setattr("app.main.OPERATIONS_TOKEN","ops-secret")
+    data=client.get("/api/operations/summary",headers={"X-Operations-Token":"ops-secret"}).json()
+    assert data["api_version"]=="0.9.0" and data["persistent_state"]=="sqlite"
     assert data["generation_enabled"] is False
+
+
+def test_private_operations_endpoints_require_token(monkeypatch):
+    monkeypatch.setattr("app.main.OPERATIONS_TOKEN","ops-secret")
+    for path in ["/api/system/worker-preflight","/api/worker/status","/api/worker/history","/api/operations/summary"]:
+        response=client.get(path)
+        assert response.status_code==401
+        assert response.json()["detail"]["code"]=="OPERATIONS_AUTH_FAILED"
+
+
+def test_private_operations_endpoints_accept_token(monkeypatch,tmp_path):
+    monkeypatch.setattr("app.main.OPERATIONS_TOKEN","ops-secret")
+    monkeypatch.setattr("app.main.STATE_DB",str(tmp_path/"private.sqlite3"))
+    headers={"X-Operations-Token":"ops-secret"}
+    for path in ["/api/system/worker-preflight","/api/worker/status","/api/worker/history","/api/operations/summary"]:
+        assert client.get(path,headers=headers).status_code==200
+
+
+def test_public_capabilities_do_not_expose_machine_diagnostics(monkeypatch):
+    from app.main import _worker
+    _worker.update(connected=True,last_seen=__import__("time").time(),worker_id="secret-node",diagnostics={"gpu_detail":"Private GPU info"})
+    data=client.get("/api/capabilities").json()
+    assert data["worker"]["worker_connected"] is True
+    assert "diagnostics" not in data["worker"]
+    assert "worker_id" not in data["worker"]
