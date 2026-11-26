@@ -1,6 +1,6 @@
 import pytest
 from pathlib import Path
-from engine_contract import ArtifactValidationError, RenderArtifactValidator
+from worker.engine_contract import ArtifactValidationError, RenderArtifactValidator
 
 
 def test_validator_rejects_path_outside_output_root(tmp_path):
