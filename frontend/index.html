@@ -106,6 +106,20 @@
     <div class="worker-safety-note"><b>Launch status</b><span>Deployment configuration is committed. A live public URL, persistent hosted history and real AI inference are not yet configured.</span></div>
     <a href="https://github.com/rf983creativestudio/rf983-motion/blob/main/docs/DEPLOYMENT_0.9.0.md" target="_blank" rel="noopener">Open deployment guide ↗</a>
   </div>
+  <div class="panel architecture-panel">
+    <div class="eyebrow">LOCAL INFERENCE ENGINE / BUILD 1.0.0</div>
+    <h2>Wan 2.2 · first render path.</h2>
+    <p class="helper">The official Wan 2.2 TI2V-5B inference program now has a guarded local execution bridge in this repository. It checks NVIDIA CUDA, local weights, FFmpeg and ffprobe before it will render, then validates the MP4 output.</p>
+    <div class="worker-safety-note"><b>Hardware gate</b><span>This Intel integrated-graphics laptop is not a supported render device. The official 720p path targets a compatible NVIDIA GPU with approximately 24 GB VRAM. System RAM is not a substitute for GPU VRAM.</span></div>
+    <div class="worker-steps">
+      <div><span>01</span><b>Prepare NVIDIA machine</b><small>Install the official Wan environment and CUDA-enabled PyTorch on a compatible GPU computer.</small></div>
+      <div><span>02</span><b>Keep weights local</b><small>Download Wan TI2V-5B weights separately; RF983 never downloads multi-gigabyte model files automatically.</small></div>
+      <div><span>03</span><b>Run preflight</b><small>Use <code>python worker/wan22_engine.py --check</code> from the repository root.</small></div>
+      <div><span>04</span><b>Render locally</b><small>Use the documented CLI bridge. Prompts and generated files stay on that computer.</small></div>
+    </div>
+    <div class="worker-safety-note"><b>Integration status</b><span>Local CLI bridge implemented. Studio Generate button and API job queue remain safely disabled until a real render is verified and the private job pipeline is complete.</span></div>
+    <a href="https://github.com/rf983creativestudio/rf983-motion/blob/main/docs/WAN22_ENGINE_SETUP.md" target="_blank" rel="noopener">Open Wan 2.2 engine setup ↗</a>
+  </div>
   <div class="model-feature-grid">
     <article class="model-feature panel"><div class="model-feature-top"><span class="model-logo">W</span><span class="research-tag">CANDIDATE A</span></div><h2>Wan 2.2 · TI2V 5B</h2><p>Text-and-image-to-video path with a 720p / 24 fps target. A practical first candidate to evaluate for a self-hosted prototype, subject to GPU memory and runtime testing.</p><div class="model-facts"><div><small>INPUT</small><b>Text + image</b></div><div><small>OUTPUT TARGET</small><b>720p · 24 fps</b></div><div><small>STATUS</small><b>Not installed</b></div></div><a href="https://github.com/Wan-Video/Wan2.2" target="_blank" rel="noopener">Official repository ↗</a></article>
     <article class="model-feature panel"><div class="model-feature-top"><span class="model-logo">L</span><span class="research-tag">CANDIDATE B</span></div><h2>LTX-2.5</h2><p>Audio-video foundation model with multi-stage pipelines. High potential for advanced workflows, but model files and VRAM requirements are substantial.</p><div class="model-facts"><div><small>INPUT</small><b>Text / image / audio</b></div><div><small>PIPELINES</small><b>Distilled / DFR</b></div><div><small>STATUS</small><b>Not installed</b></div></div><a href="https://github.com/Lightricks/LTX-2" target="_blank" rel="noopener">Official repository ↗</a></article>
@@ -143,7 +157,7 @@
     </div>
   <div class="panel reality-panel"><b>Zero-budget reality check</b><p>GitHub can store source code and host a static interface; it cannot run a cinematic video model. High-quality generation requires GPU time, model storage and bandwidth. We will keep the project private, avoid committing large weights or secrets, and only enable generation after a real worker and secure job pipeline are configured.</p></div>
 </section>
-<footer class="app-footer"><span>RF983 MOTION · BUILD 0.9.0</span><span>PRIVATE CREATIVE TECHNOLOGY PROJECT</span><span>DESIGNED FOR THE FRAME</span></footer>
+<footer class="app-footer"><span>RF983 MOTION · BUILD 1.0.0</span><span>PRIVATE CREATIVE TECHNOLOGY PROJECT</span><span>DESIGNED FOR THE FRAME</span></footer>
 </main>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
