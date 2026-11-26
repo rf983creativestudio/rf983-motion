@@ -9,9 +9,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 
-APP_VERSION="0.8.0"
+APP_VERSION="0.9.0"
 ALLOWED_ORIGINS=[x.strip() for x in os.getenv("RF983_ALLOWED_ORIGINS","http://localhost:8000,http://127.0.0.1:8000").split(",") if x.strip()]
 WORKER_TOKEN=os.getenv("RF983_WORKER_TOKEN","")
+OPERATIONS_TOKEN=os.getenv("RF983_OPERATIONS_TOKEN","")
 MAX_BODY_BYTES=int(os.getenv("RF983_MAX_BODY_BYTES",str(256*1024)))
 _started=time.time()
 _lock=Lock()
@@ -64,7 +65,7 @@ def _worker_history(limit):
         result.append({"worker_id":row["worker_id"],"engine":row["engine"],"observed_at":int(row["observed_at"]),"diagnostics":diag})
     return result
 app=FastAPI(title="RF983 MOTION API",version=APP_VERSION,description="Private API and inference-readiness foundation.",docs_url="/api/docs",redoc_url=None)
-app.add_middleware(CORSMiddleware,allow_origins=ALLOWED_ORIGINS,allow_credentials=False,allow_methods=["GET","POST"],allow_headers=["Content-Type","Authorization","X-Worker-Token"])
+app.add_middleware(CORSMiddleware,allow_origins=ALLOWED_ORIGINS,allow_credentials=False,allow_methods=["GET","POST"],allow_headers=["Content-Type","Authorization","X-Worker-Token","X-Operations-Token"])
 
 class GenerateRequest(BaseModel):
     prompt:str=Field(min_length=5,max_length=4000)
@@ -103,6 +104,12 @@ def require_worker_token(token):
     if not token or not hmac.compare_digest(token,WORKER_TOKEN):
         raise HTTPException(401,detail={"code":"WORKER_AUTH_FAILED","message":"Worker authentication failed."})
 
+def require_operations_token(token):
+    if not OPERATIONS_TOKEN:
+        raise HTTPException(503,detail={"code":"OPERATIONS_AUTH_NOT_CONFIGURED","message":"Set RF983_OPERATIONS_TOKEN to protect private machine diagnostics."})
+    if not token or not hmac.compare_digest(token,OPERATIONS_TOKEN):
+        raise HTTPException(401,detail={"code":"OPERATIONS_AUTH_FAILED","message":"Operations access token is missing or invalid."})
+
 @app.middleware("http")
 async def safety_headers(request:Request,call_next):
     if request.method in {"POST","PUT","PATCH"} and request.headers.get("content-length"):
@@ -133,11 +140,9 @@ def capabilities():
         "reason":"No verified inference adapter, durable queue, user authentication or private result storage is configured.",
         "worker":{
             "connected":fresh,
-            "worker_id":_worker["worker_id"] if fresh else None,
-            "engine":_worker["engine"] if fresh else None,
+            "worker_connected":fresh,
             "engine_ready_reported":False,
-            "capabilities":_worker["capabilities"] if fresh else [],
-            "diagnostics":_worker["diagnostics"] if fresh else {}
+            "capabilities":["creative-planning","project-export"]
         },
         "supported_request_modes":["text","image"],
         "planned_features":["verified_model_adapters","durable_generation_jobs","reference_image_conditioning","private_result_storage","authenticated_project_sync"]
@@ -149,7 +154,8 @@ def models():
     return {"models":MODEL_CATALOG,"verified_model_count":0,"generation_enabled":False}
 
 @app.get("/api/system/worker-preflight")
-def worker_preflight():
+def worker_preflight(x_operations_token:str|None=Header(default=None)):
+    require_operations_token(x_operations_token)
     tools={name:shutil.which(name) is not None for name in ("git","ffmpeg","nvidia-smi")}
     packages={name:importlib.util.find_spec(name) is not None for name in ("torch","diffusers","transformers","safetensors")}
     gpu={"detected":False,"detail":"No GPU has been verified."}
@@ -171,19 +177,22 @@ def worker_heartbeat(payload:WorkerHeartbeat,x_worker_token:str|None=Header(defa
     return {"accepted":True,"worker_id":payload.worker_id,"generation_enabled":False}
 
 @app.get("/api/worker/status")
-def worker_status():
+def worker_status(x_operations_token:str|None=Header(default=None)):
+    require_operations_token(x_operations_token)
     fresh=worker_fresh()
     return {"connected":fresh,"worker_id":_worker["worker_id"] if fresh else None,"engine":_worker["engine"] if fresh else None,"engine_ready_reported":False,"last_seen_seconds_ago":round(time.time()-_worker["last_seen"],1) if fresh else None,"diagnostics":_worker["diagnostics"] if fresh else {},"generation_enabled":False}
 
 @app.get("/api/worker/history")
-def worker_history(limit:int=12):
+def worker_history(limit:int=12,x_operations_token:str|None=Header(default=None)):
+    require_operations_token(x_operations_token)
     if limit<1 or limit>50:
         raise HTTPException(422,detail={"code":"INVALID_HISTORY_LIMIT","message":"History limit must be between 1 and 50."})
     items=_worker_history(limit)
     return {"items":items,"count":len(items),"retention_limit":250,"storage":"local-sqlite","generation_enabled":False}
 
 @app.get("/api/operations/summary")
-def operations_summary():
+def operations_summary(x_operations_token:str|None=Header(default=None)):
+    require_operations_token(x_operations_token)
     fresh=worker_fresh()
     with _state_db() as db:
         count=db.execute("SELECT COUNT(*) FROM worker_history").fetchone()[0]
