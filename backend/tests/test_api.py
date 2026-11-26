@@ -50,7 +50,10 @@ def test_worker_heartbeat_never_enables_generation(monkeypatch):
     assert response.status_code == 200
     assert response.json()["generation_enabled"] is False
     assert client.get("/api/capabilities").json()["generation_enabled"] is False
-    status = client.get("/api/worker/status").json()\n    assert status["connected"] is True\n    assert status["diagnostics"]["gpu_detected"] is True\n    assert status["engine_ready_reported"] is False
+    status = client.get("/api/worker/status").json()
+    assert status["connected"] is True
+    assert status["diagnostics"]["gpu_detected"] is True
+    assert status["engine_ready_reported"] is False
 
 def test_model_catalog_is_honest():
     data = client.get("/api/models").json()
