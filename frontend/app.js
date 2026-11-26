@@ -34,10 +34,34 @@ function buildPrompt(){const parts=[];const subject=$("#subject").value.trim(),e
 function handleReference(file){if(!file)return;if(!["image/jpeg","image/png","image/webp"].includes(file.type)){toast("Choose a JPG, PNG or WEBP image.");return}if(file.size>MAX_IMAGE_BYTES){toast("Image is larger than 10 MB. Choose a smaller reference.");return}if(state.previewUrl)URL.revokeObjectURL(state.previewUrl);state.previewUrl=URL.createObjectURL(file);state.reference={name:file.name,type:file.type,size:file.size,url:state.previewUrl};$("#reference-thumb").src=state.previewUrl;$("#reference-name").textContent=file.name;$("#reference-size").textContent=(file.size/1024/1024).toFixed(2)+" MB · local preview only";$("#reference-preview").classList.remove("hidden");$("#drop-zone").classList.add("hidden");updateReadiness()}
 function clearReference(){if(state.previewUrl)URL.revokeObjectURL(state.previewUrl);state.previewUrl=null;state.reference=null;$("#reference-image").value="";$("#reference-preview").classList.add("hidden");$("#drop-zone").classList.remove("hidden");updateReadiness()}
 function addShot(){if(state.shots.length>=12){toast("This planner supports up to 12 shots per project.");return}state.shots.push({id:makeId(),name:"New shot",framing:"Wide",camera:"Locked-off",action:"Describe the visible action and the beat this shot should communicate.",duration:5});renderAll();renderShotEditor();toast("Shot added to storyboard.")}
+async function refreshDiagnostics(){
+ const button=$("#refresh-diagnostics"),host=$("#diagnostic-results"),note=$("#diagnostic-note");
+ const base=$("#api-base").value.trim().replace(/\\/+$/,"");
+ if(!/^https?:\\/\\//i.test(base)){note.textContent="Enter a valid HTTP or HTTPS API address.";return}
+ button.disabled=true;button.textContent="Checking…";note.textContent="Checking API health, worker and model registry…";
+ const row=(name,detail,status,kind)=>'<div><span class="arch-dot '+kind+'"></span><b>'+escapeHtml(name)+'</b><small>'+escapeHtml(detail)+'</small><em>'+escapeHtml(status)+'</em></div>';
+ try{
+  const paths=["/api/health","/api/worker/status","/api/models","/api/system/ready"];
+  const responses=await Promise.all(paths.map(path=>fetch(base+path,{headers:{Accept:"application/json"},cache:"no-store"})));
+  if(responses.some(r=>!r.ok))throw new Error("One or more API checks returned an error.");
+  const [health,worker,models,ready]=await Promise.all(responses.map(r=>r.json()));
+  const verified=models.verified_model_count||0;
+  host.innerHTML=[
+   row("API connection",health.service+" · version "+health.version,"CONNECTED","ready"),
+   row("GPU worker",worker.connected?(worker.worker_id||"Worker online"):"No fresh heartbeat",worker.connected?"CONNECTED":"OFFLINE",worker.connected?"pending":"offline"),
+   row("Verified models",verified+" verified · "+models.models.length+" candidates",verified?"VERIFIED":"NONE",verified?"ready":"offline"),
+   row("Generation pipeline",ready.generation_reason||"Not enabled",ready.generation_enabled?"ENABLED":"DISABLED",ready.generation_enabled?"ready":"offline")
+  ].join("");
+  note.textContent="Diagnostics received. A connected heartbeat or detected GPU does not prove a video can be rendered.";
+ }catch(error){
+  host.innerHTML=row("API connection","Could not reach "+base,"UNAVAILABLE","offline")+row("GPU worker","Cannot verify without API","UNKNOWN","offline")+row("Verified models","Cannot verify without API","UNKNOWN","offline")+row("Generation pipeline","Must remain disabled","DISABLED","offline");
+  note.textContent="Check that the API is running, the address is correct, and CORS allows this frontend origin. "+error.message;
+ }finally{button.disabled=false;button.textContent="Run system check ↻"}
+}
 function bindEvents(){
 $$(".nav-item").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
 $$("[data-go]").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.go)));
-$("#prompt").addEventListener("input",()=>{$("#prompt-count").textContent=$("#prompt").value.length+" / 4000";updateReadiness()});
+$("#refresh-diagnostics").addEventListener("click",refreshDiagnostics);\n$("#prompt").addEventListener("input",()=>{$("#prompt-count").textContent=$("#prompt").value.length+" / 4000";updateReadiness()});
 $("#prompt-guide").addEventListener("click",()=>$("#guide-dialog").showModal());
 $("#build-prompt").addEventListener("click",buildPrompt);
 $("#reference-image").addEventListener("change",e=>handleReference(e.target.files&&e.target.files[0]));
