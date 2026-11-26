@@ -2,27 +2,101 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#090d12">
-<meta name="description" content="RF983 MOTION — private cinematic AI video studio prototype.">
-<title>RF983 MOTION — AI Video Studio</title>
-<link rel="stylesheet" href="style.css">
+<meta name="theme-color" content="#080c11"><meta name="description" content="RF983 MOTION — a private cinematic AI video creation workspace.">
+<title>RF983 MOTION — Creative Studio</title><link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="shell">
-<aside class="rail"><div class="brand"><span class="brand-mark">R</span><span>RF983 <b>MOTION</b></span></div><div class="rail-label">WORKSPACE</div><a class="nav active" href="#">✦ <span>Studio</span></a><a class="nav" href="#library">▤ <span>My creations</span></a><a class="nav" href="#models">◈ <span>Models</span></a><div class="rail-bottom"><span class="status-dot"></span> Private prototype</div></aside>
-<main>
-<header><div><div class="eyebrow">CREATIVE INTELLIGENCE / 001</div><h1>Make the impossible <em>move.</em></h1><p class="sub">A cinematic workspace for ideas that deserve more than a prompt box.</p></div><div class="avatar">RF</div></header>
-<section class="studio-grid">
-<div class="composer panel"><div class="panel-top"><div><span class="eyebrow">NEW GENERATION</span><h2>Describe your scene</h2></div><span class="pill">PRIVATE BUILD</span></div>
-<label for="prompt">YOUR CREATIVE BRIEF</label><textarea id="prompt" maxlength="1800" placeholder="A lone explorer walks through a vast black-sand desert at blue hour. A colossal ringed planet rises over the horizon. Slow anamorphic push-in, wind lifting fine volcanic dust, photorealistic textures..."></textarea>
-<div class="prompt-foot"><span id="count">0 / 1800</span><button id="enhance" class="quiet">✧ Prompt guide</button></div>
-<div class="upload-row"><div><b>Visual reference</b><small>Optional image input · JPG / PNG / WEBP</small></div><label class="upload" for="image">＋ Add image</label><input id="image" type="file" accept="image/png,image/jpeg,image/webp" hidden></div><div id="preview" class="preview hidden"></div>
-<div class="controls"><div><label for="mode">GENERATION MODE</label><select id="mode"><option value="text">Text to video</option><option value="image">Image to video</option></select></div><div><label for="aspect">ASPECT RATIO</label><select id="aspect"><option>16:9</option><option>9:16</option><option>1:1</option></select></div><div><label for="duration">DURATION</label><select id="duration"><option value="5">5 seconds</option><option value="8">8 seconds</option><option value="10">10 seconds</option></select></div><div><label for="quality">QUALITY PROFILE</label><select id="quality"><option value="max">Maximum detail (planned)</option><option value="draft">Draft preview (planned)</option></select></div></div>
-<button id="generate" class="generate"><span>✦</span> Generate video <span class="arrow">↗</span></button><p id="notice" class="notice" role="status">Generation engine is not connected. This prototype does not submit or store your prompt.</p>
-</div>
-<div class="side-stack"><div class="preview-card panel"><div class="eyebrow">THE RF983 STANDARD</div><div class="art"><div class="orb"></div><div class="horizon"></div><div class="art-caption">IMAGINATION<br><b>IN MOTION</b></div><div class="art-code">CINEMA / 001</div></div><h3>Built for the big picture.</h3><p>A workflow focused on composition, movement, continuity and cinematic intent.</p></div>
-<div class="panel model-panel" id="models"><div class="eyebrow">MODEL ROADMAP</div><div class="model-line"><span class="model-icon">W</span><div><b>Wan family</b><small>Candidate · evaluate checkpoint + license</small></div><span class="model-state">RESEARCH</span></div><div class="model-line"><span class="model-icon">L</span><div><b>LTX family</b><small>Evaluate release + hardware needs</small></div><span class="model-state">RESEARCH</span></div></div></div>
+<div class="app-shell">
+<aside class="sidebar">
+  <a class="brand" href="#studio"><span class="brand-symbol">R</span><span><b>RF983</b><small>MOTION</small></span></a>
+  <div class="workspace-tag"><i></i> PRIVATE WORKSPACE</div>
+  <nav class="main-nav" aria-label="Main navigation">
+    <button class="nav-item active" data-view="studio"><span>✳</span> Studio</button>
+    <button class="nav-item" data-view="storyboard"><span>▤</span> Storyboard <em id="shot-count">3</em></button>
+    <button class="nav-item" data-view="library"><span>▧</span> My projects</button>
+    <button class="nav-item" data-view="models"><span>◈</span> Model lab</button>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="engine-card"><span class="pulse"></span><div><b>Inference engine</b><small>Not connected yet</small></div><span class="state-tag">OFFLINE</span></div>
+    <div class="user-chip"><span class="user-avatar">RF</span><span><b>Private creator</b><small>Local workspace</small></span><span class="lock">▣</span></div>
+  </div>
+</aside>
+<main class="main-area">
+<header class="topbar"><div class="crumb"><span>RF983 MOTION</span><b>/</b><strong id="crumb-current">Studio</strong></div><div class="top-actions"><span class="privacy"><i></i> PRIVATE BUILD</span><button class="icon-button" id="export-project" title="Export project JSON">⇩</button><button class="save-button" id="save-project">Save draft <span>⌘S</span></button></div></header>
+<section class="view active" id="view-studio">
+  <div class="hero-heading"><div><div class="eyebrow">CREATIVE INTELLIGENCE / WORKSPACE 001</div><h1>Turn vision into <i>cinema.</i></h1><p>Shape the scene. Direct every frame. Build something unforgettable.</p></div><div class="project-meta"><span class="meta-label">CURRENT PROJECT</span><input id="project-name" value="Untitled cinematic project" maxlength="70" aria-label="Project name"><span class="autosave" id="save-state">LOCAL DRAFT · NOT SAVED</span></div></div>
+  <div class="studio-layout">
+    <section class="editor-column">
+      <div class="panel prompt-panel">
+        <div class="panel-heading"><div><span class="step-number">01</span><div><span class="eyebrow">THE CREATIVE BRIEF</span><h2>Describe your film</h2></div></div><span class="panel-note">PROMPT STUDIO</span></div>
+        <label class="field-label" for="prompt">MASTER PROMPT</label>
+        <textarea id="prompt" maxlength="4000" placeholder="Describe the subject, action, environment, atmosphere and visual intent. Be precise about what happens and how the camera sees it."></textarea>
+        <div class="prompt-footer"><span id="prompt-count">0 / 4000</span><button class="text-action" id="prompt-guide">✧ Prompt director</button></div>
+        <div class="prompt-tools"><div><label for="negative-prompt">NEGATIVE PROMPT <span class="optional">OPTIONAL</span></label><input id="negative-prompt" placeholder="e.g. flicker, warped hands, text, artifacts"></div><button class="small-outline" id="build-prompt">Build prompt ↗</button></div>
+        <div class="prompt-builder">
+          <div class="builder-head"><b>Director's notes</b><span>Structured creative controls</span></div>
+          <div class="builder-grid">
+            <div><label for="subject">SUBJECT / ACTION</label><input id="subject" placeholder="A lone astronaut crossing a salt flat"></div>
+            <div><label for="environment">ENVIRONMENT</label><input id="environment" placeholder="Vast desert beneath a ringed planet"></div>
+            <div><label for="lighting">LIGHTING</label><select id="lighting"><option value="">Choose lighting</option><option>Golden-hour backlight</option><option>Blue-hour cinematic dusk</option><option>Soft overcast daylight</option><option>Hard noir chiaroscuro</option><option>Neon practical lighting</option><option>Volumetric moonlight</option></select></div>
+            <div><label for="mood">MOOD</label><select id="mood"><option value="">Choose mood</option><option>Wonder and discovery</option><option>Tense and suspenseful</option><option>Quiet and contemplative</option><option>Epic and triumphant</option><option>Dreamlike and surreal</option><option>Intimate and emotional</option></select></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel reference-panel">
+        <div class="panel-heading compact"><div><span class="step-number">02</span><div><span class="eyebrow">VISUAL DIRECTION</span><h2>Reference image</h2></div></div><span class="panel-note">OPTIONAL INPUT</span></div>
+        <div class="reference-drop" id="drop-zone"><div class="upload-icon">＋</div><div><b>Drop a visual reference here</b><small>JPG, PNG or WEBP · up to 10 MB · stays in this browser</small></div><label class="small-outline upload-label" for="reference-image">Browse image</label><input id="reference-image" type="file" accept="image/jpeg,image/png,image/webp" hidden></div><div class="reference-preview hidden" id="reference-preview"><img id="reference-thumb" alt="Selected reference"><div><b id="reference-name">Reference image</b><small id="reference-size"></small></div><button class="remove-button" id="remove-reference" aria-label="Remove reference">×</button></div>
+      </div>
+      <div class="panel storyboard-mini">
+        <div class="panel-heading compact"><div><span class="step-number">03</span><div><span class="eyebrow">SEQUENCE DESIGN</span><h2>Shot storyboard</h2></div></div><button class="text-action" data-go="storyboard">Open shot planner ↗</button></div>
+        <div class="shot-strip" id="shot-strip"></div>
+      </div>
+    </section>
+    <aside class="settings-column">
+      <div class="panel settings-panel">
+        <div class="panel-heading"><div><span class="step-number">04</span><div><span class="eyebrow">OUTPUT CONFIGURATION</span><h2>Film settings</h2></div></div></div>
+        <div class="setting-group"><label for="model">MODEL ROUTE</label><select id="model"><option value="auto">Auto · best available (planned)</option><option value="wan-ti2v-5b">Wan 2.2 TI2V 5B · candidate</option><option value="wan-i2v-14b">Wan 2.2 I2V 14B · candidate</option><option value="ltx-2.5">LTX-2.5 · candidate</option></select><small class="helper">Model routes are planning options. No model is loaded.</small></div>
+        <div class="setting-grid">
+          <div class="setting-group"><label for="aspect">ASPECT RATIO</label><select id="aspect"><option value="16:9">16:9 · Cinema</option><option value="9:16">9:16 · Vertical</option><option value="1:1">1:1 · Square</option><option value="4:3">4:3 · Classic</option><option value="21:9">21:9 · Ultra-wide</option></select></div>
+          <div class="setting-group"><label for="resolution">RESOLUTION</label><select id="resolution"><option value="720p">720p · HD</option><option value="1080p">1080p · Full HD</option><option value="4k">4K · UHD (planned)</option></select></div>
+          <div class="setting-group"><label for="duration">DURATION</label><select id="duration"><option value="5">5 seconds</option><option value="8">8 seconds</option><option value="10">10 seconds</option><option value="15">15 seconds</option><option value="20">20 seconds</option></select></div>
+          <div class="setting-group"><label for="fps">FRAME RATE</label><select id="fps"><option value="24">24 fps · Film</option><option value="25">25 fps</option><option value="30">30 fps</option><option value="48">48 fps</option><option value="60">60 fps</option></select></div>
+        </div>
+        <div class="setting-group"><label for="quality">QUALITY PROFILE</label><select id="quality"><option value="cinematic">Cinematic · maximum detail</option><option value="balanced">Balanced · quality / speed</option><option value="draft">Draft · fast preview</option></select></div>
+        <div class="setting-group"><label for="seed">GENERATION SEED</label><div class="seed-row"><input id="seed" type="number" min="0" max="2147483647" placeholder="Random seed"><button class="small-outline" id="random-seed">Randomize</button></div><small class="helper">A fixed seed can help reproduce a supported workflow.</small></div>
+        <div class="divider"></div>
+        <div class="setting-group"><label class="toggle-row"><span><b>Native audio</b><small>Model-dependent · planned</small></span><input id="audio" type="checkbox"><i></i></label><label class="toggle-row"><span><b>Motion refinement</b><small>Extra processing · planned</small></span><input id="refine" type="checkbox" checked><i></i></label></div>
+        <button class="generate-button" id="generate"><span>✦</span> Generate cinematic video <b>↗</b></button>
+        <p class="engine-warning" id="generation-status">Engine offline · generation is safely disabled. Nothing will be uploaded.</p>
+      </div>
+      <div class="panel checklist-panel"><div class="eyebrow">PROJECT READINESS</div><div class="check-row"><span class="check-icon" id="check-prompt">○</span><span>Creative brief</span><b id="check-prompt-label">Missing</b></div><div class="check-row"><span class="check-icon" id="check-shots">●</span><span>Shot sequence</span><b id="check-shots-label">3 shots</b></div><div class="check-row"><span class="check-icon" id="check-reference">○</span><span>Visual reference</span><b id="check-reference-label">Optional</b></div><div class="readiness-bar"><i id="readiness-fill"></i></div><small id="readiness-text">2 of 3 essentials ready</small></div>
+    </aside>
+  </div>
 </section>
-<section class="bottom panel" id="library"><div><div class="eyebrow">YOUR WORKSPACE</div><h2>Creation history</h2></div><div class="empty"><span>◌</span><b>Your first film starts here.</b><small>History appears after a secure generation service is connected.</small></div></section>
-<footer>RF983 MOTION <span>PRIVATE CREATIVE TECHNOLOGY PROJECT</span><span>BUILD 0.1.0</span></footer>
-</main></div><script src="app.js"></script></body></html>
+<section class="view" id="view-storyboard">
+  <div class="page-heading"><div><div class="eyebrow">DIRECTOR'S WORKSPACE / 02</div><h1>Build the <i>sequence.</i></h1><p>Break the film into deliberate shots. Set the framing, movement and action for every beat.</p></div><button class="primary-button" id="add-shot">＋ Add shot</button></div>
+  <div class="storyboard-toolbar panel"><div><b>Shot list</b><span id="storyboard-total">3 shots · 15 seconds planned</span></div><button class="small-outline" id="reset-shots">Reset sequence</button></div>
+  <div class="shot-editor-list" id="shot-editor-list"></div>
+  <div class="panel sequence-note"><div><span class="eyebrow">SEQUENCE NOTE</span><h3>Think in visual continuity.</h3><p>Keep subject identity, screen direction, lighting logic and geography consistent between adjacent shots. Duration is a planning estimate; the connected model may impose different frame limits.</p></div><div class="sequence-stat"><b id="sequence-duration">15s</b><small>PLANNED RUNTIME</small></div></div>
+</section>
+<section class="view" id="view-library">
+  <div class="page-heading"><div><div class="eyebrow">YOUR PRIVATE WORKSPACE / 03</div><h1>Project <i>library.</i></h1><p>Drafts saved in this browser only. No account sync or cloud storage is configured.</p></div><button class="primary-button" id="new-project">＋ New project</button></div>
+  <div class="library-toolbar"><div><b>Saved drafts</b><span id="library-count">0 projects</span></div><button class="small-outline" id="clear-library">Clear local library</button></div>
+  <div class="library-grid" id="library-grid"></div>
+</section>
+<section class="view" id="view-models">
+  <div class="page-heading"><div><div class="eyebrow">INFERENCE RESEARCH / 04</div><h1>The <i>model lab.</i></h1><p>Evaluate model families before committing to hardware, weights or a deployment path.</p></div><span class="offline-pill"><i></i> NO GPU WORKER CONNECTED</span></div>
+  <div class="model-feature-grid">
+    <article class="model-feature panel"><div class="model-feature-top"><span class="model-logo">W</span><span class="research-tag">CANDIDATE A</span></div><h2>Wan 2.2 · TI2V 5B</h2><p>Text-and-image-to-video path with a 720p / 24 fps target. A practical first candidate to evaluate for a self-hosted prototype, subject to GPU memory and runtime testing.</p><div class="model-facts"><div><small>INPUT</small><b>Text + image</b></div><div><small>OUTPUT TARGET</small><b>720p · 24 fps</b></div><div><small>STATUS</small><b>Not installed</b></div></div><a href="https://github.com/Wan-Video/Wan2.2" target="_blank" rel="noopener">Official repository ↗</a></article>
+    <article class="model-feature panel"><div class="model-feature-top"><span class="model-logo">L</span><span class="research-tag">CANDIDATE B</span></div><h2>LTX-2.5</h2><p>Audio-video foundation model with multi-stage pipelines. High potential for advanced workflows, but model files and VRAM requirements are substantial.</p><div class="model-facts"><div><small>INPUT</small><b>Text / image / audio</b></div><div><small>PIPELINES</small><b>Distilled / DFR</b></div><div><small>STATUS</small><b>Not installed</b></div></div><a href="https://github.com/Lightricks/LTX-2" target="_blank" rel="noopener">Official repository ↗</a></article>
+  </div>
+  <div class="panel architecture-panel"><div class="eyebrow">SYSTEM STATUS</div><h2>What is connected today?</h2><div class="architecture-list"><div><span class="arch-dot ready"></span><b>Studio frontend</b><small>Available locally / static hosting</small><em>READY</em></div><div><span class="arch-dot ready"></span><b>Project drafts</b><small>Browser local storage only</small><em>READY</em></div><div><span class="arch-dot pending"></span><b>FastAPI service</b><small>Health and capability contract</small><em>FOUNDATION</em></div><div><span class="arch-dot offline"></span><b>GPU inference worker</b><small>No model weights or compute connected</small><em>OFFLINE</em></div><div><span class="arch-dot offline"></span><b>Render storage / job queue</b><small>Requires backend infrastructure</small><em>NOT BUILT</em></div></div></div>
+  <div class="panel reality-panel"><b>Zero-budget reality check</b><p>GitHub can store source code and host a static interface; it cannot run a cinematic video model. High-quality generation requires GPU time, model storage and bandwidth. We will keep the project private, avoid committing large weights or secrets, and only enable generation after a real worker and secure job pipeline are configured.</p></div>
+</section>
+<footer class="app-footer"><span>RF983 MOTION · BUILD 0.2.0</span><span>PRIVATE CREATIVE TECHNOLOGY PROJECT</span><span>DESIGNED FOR THE FRAME</span></footer>
+</main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<dialog id="guide-dialog" class="guide-dialog"><form method="dialog"><button class="dialog-close" aria-label="Close">×</button><div class="eyebrow">PROMPT DIRECTOR</div><h2>Write for the camera.</h2><p>A strong cinematic prompt describes more than a subject. Build it in layers:</p><ol><li><b>Subject and action</b> — who or what is visible, and exactly what changes.</li><li><b>Environment</b> — location, weather, depth and background details.</li><li><b>Framing</b> — wide, medium, close-up, angle and composition.</li><li><b>Camera movement</b> — locked-off, dolly, tracking, crane or orbit.</li><li><b>Light and texture</b> — source, direction, contrast, atmosphere and material.</li><li><b>Temporal logic</b> — one clear action that unfolds in a readable order.</li></ol><p class="dialog-footnote">Prompt assistance here is a local writing guide, not an AI model call.</p><button class="primary-button dialog-done">Got it</button></form></dialog>
+<script src="app.js"></script>
+</body></html>
