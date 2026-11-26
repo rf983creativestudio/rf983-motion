@@ -2,6 +2,14 @@
 
 RF983 MOTION is a private, self-hostable foundation for a cinematic AI video-generation workspace.
 
+## Build 0.5.0 — Creator workflow and portability
+- Prompt direction heuristic with immediate writing cues (no AI API call).
+- Visual sequence timeline driven by per-shot duration.
+- Duplicate and reorder storyboard shots.
+- Debounced local draft autosave while editing the prompt and storyboard.
+- Import validated RF983 MOTION JSON project files; image files remain separate and must be re-selected.
+- Existing export and local project library retained.
+
 ## Build 0.4.0 — Engine integration and operations foundation
 - Studio, Storyboard, My Projects and Model Lab creative workspace.
 - Structured prompt controls, shot planning, local drafts and JSON export.
