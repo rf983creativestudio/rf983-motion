@@ -2,47 +2,53 @@
 
 RF983 MOTION is a private, self-hostable foundation for a cinematic AI video-generation workspace.
 
-## Build 0.2.0 — Studio expansion
-- Multi-view workspace: Studio, Storyboard, My Projects and Model Lab.
-- Structured director's notes and local prompt assembly.
-- Editable shot list with framing, camera movement, action and duration.
-- Film output configuration: aspect ratio, resolution, duration, frame rate, quality, seed, audio and refinement options.
-- Reference-image preview with file type and 10 MB validation. The image stays in the browser and is not uploaded.
-- Browser-local draft saving, project library and portable JSON export.
-- FastAPI health and capability endpoints.
-- Generation and job endpoints explicitly fail closed until a real GPU worker, private authentication, queue and storage are connected.
+## Build 0.3.0 — Operations and worker-readiness foundation
+- Studio, Storyboard, My Projects and Model Lab creative workspace.
+- Structured prompt controls, shot planning, local drafts and JSON export.
+- FastAPI health, capability and system-readiness diagnostics.
+- Authenticated worker heartbeat contract with 45-second expiry.
+- Request-size guard and baseline response security headers.
+- GitHub Actions API tests and frontend syntax checks.
+- Docker Compose local development stack for API and studio UI.
+- Generation remains disabled until a verified model adapter, durable queue, user authentication and private storage exist.
 
-## Run the frontend
-Open \`frontend/index.html\` locally. For static hosting, publish the contents of the \`frontend/\` folder. Browser local storage is local to that browser and device.
+## Quick start — Docker Compose
+Copy `.env.example` to `.env`, set a long random `RF983_WORKER_TOKEN`, then run:
+```bash
+docker compose up --build
+```
+Studio: `http://localhost:8080`; API: `http://localhost:8000`.
 
-## Run the API locally
-\`\`\`bash
+The included Compose stack binds to loopback and is for local development, not public production. See [Local deployment](docs/DEPLOYMENT.md).
+
+## Run without Docker
+Open `frontend/index.html` locally. To run the API:
+```bash
 cd backend
 python -m venv .venv
 # Windows: .venv\\Scripts\\activate
 # macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload
-\`\`\`
-API docs: \`/api/docs\`; health: \`/api/health\`; capabilities: \`/api/capabilities\`.
+```
+Health: `/api/health`; capabilities: `/api/capabilities`; readiness: `/api/system/ready`; docs: `/api/docs`.
 
-Set \`RF983_ALLOWED_ORIGINS\` to a comma-separated list of exact trusted origins when deploying the API. The default is localhost only.
+## Worker contract
+Workers may send an authenticated heartbeat to `POST /api/worker/heartbeat` using the `X-Worker-Token` header. This reports connectivity only; it does not create jobs or prove a model can render. See [Worker contract](docs/WORKER_CONTRACT.md).
 
-## Current limitations
-This build is a functioning creative-planning frontend, not a functioning AI video generator. The prompt builder, shot planner, local drafts, project library and JSON export work in the browser. The Generate action is intentionally blocked. There is no GPU worker, persistent job queue, cloud render storage, user login, billing, or cloud sync.
+## Honest capability boundary
+This build is a creative-planning and service-readiness platform, not yet a functioning AI video generator. Generate remains blocked. There is no real model inference, GPU scheduler, durable queue, user login, billing, cloud sync or render storage. A worker heartbeat is not a successful generation test.
 
-## Model research
-- [Wan 2.2](https://github.com/Wan-Video/Wan2.2) — includes a 5B text/image-to-video path targeting 720p at 24 fps; actual hardware needs must be tested.
-- [LTX-2.5](https://github.com/Lightricks/LTX-2) — advanced audio/video pipelines; current model files are substantial and the exact model license is separate from the code license.
+## Model candidates
+- [Wan 2.2](https://github.com/Wan-Video/Wan2.2) — includes a 5B text/image-to-video path targeting 720p at 24 fps; hardware must be tested.
+- [LTX-2.5](https://github.com/Lightricks/LTX-2) — advanced audio/video pipelines; review exact checkpoint and dependency licensing.
 
-Review the license for the exact checkpoint and any dependent text encoder before use. Do not assume an open-source code license automatically covers model weights or commercial use.
-
-## Security rules
+## Security
 - Keep this repository private.
-- Never commit API keys, access tokens, model weights, user images, generated videos or private logs.
-- Keep inference credentials on the server only.
-- Before enabling inference, add private authentication, per-user quotas, upload validation, worker isolation, signed storage URLs, retention controls and audit logging.
-- Do not promise unlimited free generation. GPU compute, model storage and delivery bandwidth have real costs.
+- Never commit API keys, worker tokens, model weights, user images, generated videos or private logs.
+- Keep inference credentials server-side.
+- Configure exact allowed origins; default CORS is localhost only.
+- Add user authentication, quotas, upload inspection, worker isolation and signed private result URLs before public access.
+- Do not promise unlimited free generation: GPU compute, model storage and delivery bandwidth have real costs.
 
-## Project data
-Project JSON exports include prompts, settings and shot plans, but do not embed reference image files. Re-select the reference image after importing or restoring a project.
+Project JSON exports do not embed reference-image files. Re-select a reference after importing or restoring a project.
