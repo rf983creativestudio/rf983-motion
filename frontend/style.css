@@ -80,3 +80,8 @@
 .diagnostic-controls input::placeholder{letter-spacing:0;color:#71808a}
 #diagnostic-note{line-height:1.6;max-width:900px}
 #worker-history .history-empty{line-height:1.6}
+
+.launch-panel{margin:0 0 16px;padding:20px}
+.launch-panel h2{margin:5px 0 6px;font:500 22px Georgia,serif}
+.launch-panel>a{font-size:11px;color:var(--accent);text-decoration:none}
+.launch-panel .worker-steps{margin:14px 0}
