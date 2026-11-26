@@ -55,7 +55,7 @@ def _record_worker_heartbeat(worker_id,engine,diagnostics):
         db.execute("INSERT INTO worker_history(worker_id,engine,observed_at,diagnostics_json) VALUES(?,?,?,?)",(worker_id,engine,time.time(),payload))
         db.execute("DELETE FROM worker_history WHERE id NOT IN (SELECT id FROM worker_history ORDER BY observed_at DESC LIMIT 250)")
 def _worker_history(limit):
-    with _state_connection() as db:
+    with _state_db() as db:
         rows=db.execute("SELECT worker_id,engine,observed_at,diagnostics_json FROM worker_history ORDER BY observed_at DESC LIMIT ?",(limit,)).fetchall()
     result=[]
     for row in rows:
@@ -185,7 +185,7 @@ def worker_history(limit:int=12):
 @app.get("/api/operations/summary")
 def operations_summary():
     fresh=worker_fresh()
-    with _state_connection() as db:
+    with _state_db() as db:
         count=db.execute("SELECT COUNT(*) FROM worker_history").fetchone()[0]
     return {"api_version":APP_VERSION,"uptime_seconds":int(time.time()-_started),"worker_connected":fresh,
             "worker_id":_worker["worker_id"] if fresh else None,"worker_history_records":count,
