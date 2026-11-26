@@ -37,7 +37,7 @@ function addShot(){if(state.shots.length>=12){toast("This planner supports up to
 async function refreshDiagnostics(){
  const button=$("#refresh-diagnostics"),host=$("#diagnostic-results"),note=$("#diagnostic-note");
  const base=$("#api-base").value.trim().replace(/\\/+$/,"");
- if(!/^https?:\\/\\//i.test(base)){note.textContent="Enter a valid HTTP or HTTPS API address.";return}
+ if(!(base.startsWith("http://")||base.startsWith("https://"))){note.textContent="Enter a valid HTTP or HTTPS API address.";return}
  button.disabled=true;button.textContent="Checking…";note.textContent="Checking API health, worker and model registry…";
  const row=(name,detail,status,kind)=>'<div><span class="arch-dot '+kind+'"></span><b>'+escapeHtml(name)+'</b><small>'+escapeHtml(detail)+'</small><em>'+escapeHtml(status)+'</em></div>';
  try{
