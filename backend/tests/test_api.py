@@ -95,13 +95,14 @@ def test_worker_heartbeat_is_persisted(monkeypatch,tmp_path):
     response=client.post("/api/worker/heartbeat",headers={"X-Worker-Token":"history-secret"},
         json={"worker_id":"local-gpu-01","engine":"rf983-preflight-agent/0.7","diagnostics":{"gpu_detected":True,"gpu_detail":"Example GPU"}})
     assert response.status_code==200
-    data=client.get("/api/worker/history?limit=5").json()
+    data=client.get("/api/worker/history?limit=5",headers={"X-Operations-Token":"ops-secret"}).json()
     assert data["count"]==1 and data["items"][0]["worker_id"]=="local-gpu-01"
     assert data["items"][0]["diagnostics"]["gpu_detected"] is True
     assert data["generation_enabled"] is False
 
-def test_worker_history_rejects_invalid_limit():
-    response=client.get("/api/worker/history?limit=500")
+def test_worker_history_rejects_invalid_limit(monkeypatch):
+    monkeypatch.setattr("app.main.OPERATIONS_TOKEN","ops-secret")
+    response=client.get("/api/worker/history?limit=500",headers={"X-Operations-Token":"ops-secret"})
     assert response.status_code==422
     assert response.json()["detail"]["code"]=="INVALID_HISTORY_LIMIT"
 
