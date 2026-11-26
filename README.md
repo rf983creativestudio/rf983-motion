@@ -2,6 +2,17 @@
 
 RF983 MOTION is a private, self-hostable foundation for a cinematic AI video-generation workspace.
 
+## Build 0.9.0 — Public launch and protected operations
+- Single-service Docker image bundles the static studio and FastAPI behind same-origin Nginx routing.
+- Render Blueprint (`render.yaml`) and step-by-step deployment guide for a public HTTPS URL.
+- Private operations token protects worker status, machine preflight, worker history and operations summary.
+- Public capability responses no longer expose worker IDs or machine diagnostic details.
+- Model Lab accepts the operations token in-memory only; it is not written to browser storage.
+- Local Docker Compose now supports separate worker and operations secrets.
+- Added access-control regression tests and a container-build CI job.
+- Render free-tier state uses ephemeral `/tmp` storage; persistent report history is not guaranteed across restarts.
+- AI video generation remains disabled until a verified inference adapter, queue, user authentication and private artifact storage exist.
+
 ## Build 0.8.0 — Persistent operations and diagnostics history
 - SQLite-backed worker preflight history, retained across API/container restarts when the Docker volume is kept.
 - Bounded history retention (latest 250 reports) and 1–50 record query limit.
@@ -52,8 +63,11 @@ See [worker setup](worker/README.md) and [engine adapter contract](docs/ENGINE_A
 - Explicit provider-neutral engine adapter contract documented in the architecture plan.
 - Request-size guard, baseline response security headers, Docker Compose local stack and API tests.
 
+## Public deployment — Render
+See [Deployment 0.9.0](docs/DEPLOYMENT_0.9.0.md). The repository includes a Render Blueprint and a root Dockerfile for a single-service deployment.
+
 ## Quick start — Docker Compose
-Copy `.env.example` to `.env`, set a long random `RF983_WORKER_TOKEN`, then run:
+Copy `.env.example` to `.env`, set two different long random secrets (`RF983_WORKER_TOKEN` and `RF983_OPERATIONS_TOKEN`), then run:
 ```bash
 docker compose up --build
 ```
@@ -77,10 +91,10 @@ uvicorn app.main:app --reload
 - `GET /api/capabilities` — honest feature boundary and worker snapshot.
 - `GET /api/system/ready` — production readiness gates.
 - `GET /api/models` — candidate model catalog; not a claim that weights are installed.
-- `GET /api/system/worker-preflight` — read-only environment diagnostics.
-- `GET /api/worker/status` — heartbeat freshness.
-- `GET /api/worker/history?limit=12` — latest persisted worker preflight reports (maximum 50 per request; 250 retained).
-- `GET /api/operations/summary` — operational summary and generation gate state.
+- `GET /api/system/worker-preflight` — read-only environment diagnostics (requires `X-Operations-Token`).
+- `GET /api/worker/status` — heartbeat freshness (requires `X-Operations-Token`).
+- `GET /api/worker/history?limit=12` — latest persisted worker preflight reports (requires `X-Operations-Token`; maximum 50 per request; 250 retained).
+- `GET /api/operations/summary` — operational summary and generation gate state (requires `X-Operations-Token`).
 - `POST /api/worker/heartbeat` — authenticated worker heartbeat using `X-Worker-Token`.
 - `POST /api/generate` — deliberately returns 503 until inference is genuinely verified.
 
