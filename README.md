@@ -2,6 +2,14 @@
 
 RF983 MOTION is a private, self-hostable foundation for a cinematic AI video-generation workspace.
 
+## Build 0.6.0 — Production desk and handoff exports
+- Local pre-production audit for project identity, brief depth, shot actions, duplicate shot names, camera variety, negative prompt and reference-image status.
+- Live planning metrics: shot count, storyboard runtime, frame estimate from runtime × target FPS, and checklist score.
+- Director brief Markdown export with creative settings, director notes, shot-by-shot plan, pre-production findings and honest handoff limitations.
+- Shot-list CSV export for spreadsheet review and production coordination.
+- Structured production JSON export containing project metadata, planning estimates and audit findings.
+- Exports are generated in the browser; no prompt, project or reference image is uploaded to a server.
+
 ## Build 0.5.0 — Creator workflow and portability
 - Prompt direction heuristic with immediate writing cues (no AI API call).
 - Visual sequence timeline driven by per-shot duration.
