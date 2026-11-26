@@ -33,3 +33,12 @@ jobs:
           node-version: "22"
       - run: node --check frontend/app.js
       - run: test -s frontend/index.html && test -s frontend/style.css && test -s frontend/app.js
+
+  container-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build public deployment image
+        run: docker build -t rf983-motion:ci .
+      - name: Verify deployment manifest files
+        run: test -s render.yaml && test -s deploy/start.sh && test -s deploy/nginx.conf.template && test -s docs/DEPLOYMENT_0.9.0.md
