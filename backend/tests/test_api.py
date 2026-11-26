@@ -4,13 +4,13 @@ from app.main import app, _worker
 client = TestClient(app)
 
 def setup_function():
-    _worker.update(connected=False, engine_ready=False, engine=None, worker_id=None, last_seen=None, capabilities=[])
+    _worker.update(connected=False, engine_ready=False, engine=None, worker_id=None, last_seen=None, capabilities=[], diagnostics={})
 
 def test_health_reports_inference_offline():
     response = client.get("/api/health")
     assert response.status_code == 200
     assert response.json()["inference"] == "offline"
-    assert response.json()["version"] == "0.4.0"
+    assert response.json()["version"] == "0.7.0"
 
 def test_capabilities_do_not_claim_generation():
     response = client.get("/api/capabilities")
@@ -46,11 +46,11 @@ def test_worker_rejects_wrong_secret(monkeypatch):
 
 def test_worker_heartbeat_never_enables_generation(monkeypatch):
     monkeypatch.setattr("app.main.WORKER_TOKEN", "right-secret")
-    response = client.post("/api/worker/heartbeat", headers={"X-Worker-Token":"right-secret"}, json={"worker_id":"gpu-node-1","engine":"test-engine","engine_ready":True,"capabilities":["text-to-video"]})
+    response = client.post("/api/worker/heartbeat", headers={"X-Worker-Token":"right-secret"}, json={"worker_id":"gpu-node-1","engine":"rf983-preflight-agent/0.7","engine_ready":True,"capabilities":["hardware-preflight"],"diagnostics":{"gpu_detected":True,"gpu_detail":"Test GPU","generation_capable":False}})
     assert response.status_code == 200
     assert response.json()["generation_enabled"] is False
     assert client.get("/api/capabilities").json()["generation_enabled"] is False
-    assert client.get("/api/worker/status").json()["connected"] is True
+    status = client.get("/api/worker/status").json()\n    assert status["connected"] is True\n    assert status["diagnostics"]["gpu_detected"] is True\n    assert status["engine_ready_reported"] is False
 
 def test_model_catalog_is_honest():
     data = client.get("/api/models").json()
@@ -69,3 +69,16 @@ def test_security_headers_present():
     response = client.get("/api/health")
     assert response.headers["x-content-type-options"] == "nosniff"
     assert response.headers["x-frame-options"] == "DENY"
+
+
+def test_worker_status_hides_stale_diagnostics():
+    from app.main import _worker
+    _worker.update(connected=True, last_seen=0, diagnostics={"gpu_detected": True})
+    data = client.get("/api/worker/status").json()
+    assert data["connected"] is False
+    assert data["diagnostics"] == {}
+
+
+def test_health_exposes_worker_protocol_version():
+    data = client.get("/api/health").json()
+    assert data["worker_agent_protocol"] == "0.7"
