@@ -46,11 +46,12 @@ def test_worker_rejects_wrong_secret(monkeypatch):
 
 def test_worker_heartbeat_never_enables_generation(monkeypatch):
     monkeypatch.setattr("app.main.WORKER_TOKEN", "right-secret")
+    monkeypatch.setattr("app.main.OPERATIONS_TOKEN", "ops-secret")
     response = client.post("/api/worker/heartbeat", headers={"X-Worker-Token":"right-secret"}, json={"worker_id":"gpu-node-1","engine":"rf983-preflight-agent/0.7","engine_ready":True,"capabilities":["hardware-preflight"],"diagnostics":{"gpu_detected":True,"gpu_detail":"Test GPU","generation_capable":False}})
     assert response.status_code == 200
     assert response.json()["generation_enabled"] is False
     assert client.get("/api/capabilities").json()["generation_enabled"] is False
-    status = client.get("/api/worker/status").json()
+    status = client.get("/api/worker/status",headers={"X-Operations-Token":"ops-secret"}).json()
     assert status["connected"] is True
     assert status["diagnostics"]["gpu_detected"] is True
     assert status["engine_ready_reported"] is False
