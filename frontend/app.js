@@ -36,7 +36,8 @@ function clearReference(){if(state.previewUrl)URL.revokeObjectURL(state.previewU
 function addShot(){if(state.shots.length>=12){toast("This planner supports up to 12 shots per project.");return}state.shots.push({id:makeId(),name:"New shot",framing:"Wide",camera:"Locked-off",action:"Describe the visible action and the beat this shot should communicate.",duration:5});renderAll();renderShotEditor();toast("Shot added to storyboard.")}
 async function refreshDiagnostics(){
  const button=$("#refresh-diagnostics"),host=$("#diagnostic-results"),note=$("#diagnostic-note");
- const base=$("#api-base").value.trim().replace(/\\/+$/,"");
+ let base=$("#api-base").value.trim();
+ while(base.endsWith("/"))base=base.slice(0,-1);
  if(!(base.startsWith("http://")||base.startsWith("https://"))){note.textContent="Enter a valid HTTP or HTTPS API address.";return}
  button.disabled=true;button.textContent="Checking…";note.textContent="Checking API health, worker and model registry…";
  const row=(name,detail,status,kind)=>'<div><span class="arch-dot '+kind+'"></span><b>'+escapeHtml(name)+'</b><small>'+escapeHtml(detail)+'</small><em>'+escapeHtml(status)+'</em></div>';
