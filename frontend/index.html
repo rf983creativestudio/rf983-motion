@@ -98,6 +98,19 @@
     <article class="model-feature panel"><div class="model-feature-top"><span class="model-logo">L</span><span class="research-tag">CANDIDATE B</span></div><h2>LTX-2.5</h2><p>Audio-video foundation model with multi-stage pipelines. High potential for advanced workflows, but model files and VRAM requirements are substantial.</p><div class="model-facts"><div><small>INPUT</small><b>Text / image / audio</b></div><div><small>PIPELINES</small><b>Distilled / DFR</b></div><div><small>STATUS</small><b>Not installed</b></div></div><a href="https://github.com/Lightricks/LTX-2" target="_blank" rel="noopener">Official repository ↗</a></article>
   </div>
   <div class="panel architecture-panel"><div class="eyebrow">SYSTEM STATUS</div><h2>What is connected today?</h2><div class="architecture-list"><div><span class="arch-dot ready"></span><b>Studio frontend</b><small>Available locally / static hosting</small><em>READY</em></div><div><span class="arch-dot ready"></span><b>Project drafts</b><small>Browser local storage only</small><em>READY</em></div><div><span class="arch-dot pending"></span><b>FastAPI service</b><small>Health and capability contract</small><em>FOUNDATION</em></div><div><span class="arch-dot offline"></span><b>GPU inference worker</b><small>No model weights or compute connected</small><em>OFFLINE</em></div><div><span class="arch-dot offline"></span><b>Render storage / job queue</b><small>Requires backend infrastructure</small><em>NOT BUILT</em></div></div></div>
+  <div class="panel worker-setup-panel">
+    <div class="eyebrow">LOCAL COMPUTE BRIDGE / PROTOCOL 0.7</div>
+    <h2>Bring your computer into the studio.</h2>
+    <p class="helper">The new local preflight agent can securely report your computer's hardware and software inventory to your API. It does not install models, send creative projects or generate video.</p>
+    <div class="worker-steps">
+      <div><span>01</span><b>Run the API</b><small>Start the FastAPI service on your trusted computer.</small></div>
+      <div><span>02</span><b>Configure the secret</b><small>Set the same private RF983_WORKER_TOKEN in the API and worker/.env.</small></div>
+      <div><span>03</span><b>Start the agent</b><small>Open worker/start-windows.bat on Windows or worker/start-unix.sh on Linux/macOS.</small></div>
+      <div><span>04</span><b>Check diagnostics</b><small>Run the system check below to see GPU, FFmpeg and Python package detection.</small></div>
+    </div>
+    <div class="worker-safety-note"><b>Privacy and safety</b><span>The worker sends machine diagnostics and a worker ID only. Never publish your token or expose the API to the public internet. A connected worker is not an inference engine.</span></div>
+    <a href="https://github.com/rf983creativestudio/rf983-motion/tree/main/worker" target="_blank" rel="noopener">Open worker setup files ↗</a>
+  </div>
   <div class="panel architecture-panel" id="live-diagnostics">
     <div class="eyebrow">LIVE CONNECTION CHECK</div><h2>Connect to your local API</h2>
     <p class="helper">This checks your own running API. It does not upload prompts or start generation.</p>
