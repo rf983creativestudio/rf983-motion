@@ -8,14 +8,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 
-APP_VERSION="0.4.0"
+APP_VERSION="0.7.0"
 ALLOWED_ORIGINS=[x.strip() for x in os.getenv("RF983_ALLOWED_ORIGINS","http://localhost:8000,http://127.0.0.1:8000").split(",") if x.strip()]
 WORKER_TOKEN=os.getenv("RF983_WORKER_TOKEN","")
 MAX_BODY_BYTES=int(os.getenv("RF983_MAX_BODY_BYTES",str(256*1024)))
 _started=time.time()
 _lock=Lock()
 _events: deque[dict[str,Any]]=deque(maxlen=100)
-_worker={"connected":False,"engine_ready":False,"engine":None,"worker_id":None,"last_seen":None,"capabilities":[]}
+_worker={"connected":False,"engine_ready":False,"engine":None,"worker_id":None,"last_seen":None,"capabilities":[],"diagnostics":{}}
 
 MODEL_CATALOG=[
  {"id":"wan-ti2v-5b","name":"Wan 2.2 TI2V 5B","tasks":["text-to-video","image-to-video"],"target":"720p","fps":24,"audio":False,"status":"candidate","adapter_installed":False,"weights_present":False,"license_review_required":True,"source":"https://github.com/Wan-Video/Wan2.2"},
@@ -51,6 +51,7 @@ class WorkerHeartbeat(BaseModel):
     engine:str=Field(min_length=2,max_length=80)
     engine_ready:bool=False
     capabilities:list[str]=Field(default_factory=list,max_length=30)
+    diagnostics:dict[str,Any]=Field(default_factory=dict)
 
 def worker_fresh():
     return bool(_worker["last_seen"] and time.time()-_worker["last_seen"]<45)
@@ -75,17 +76,17 @@ async def safety_headers(request:Request,call_next):
 
 @app.get("/api/health")
 def health():
-    return {"status":"ok","service":"rf983-motion-api","version":APP_VERSION,"inference":"offline","uptime_seconds":int(time.time()-_started)}
+    return {"status":"ok","service":"rf983-motion-api","version":APP_VERSION,"inference":"offline","worker_agent_protocol":"0.7","uptime_seconds":int(time.time()-_started)}
 
 @app.get("/api/system/ready")
 def system_ready():
     connected=worker_fresh()
-    return {"api":"ready","worker":"connected" if connected else "offline","engine":"reported_ready" if connected and _worker["engine_ready"] else "not_configured","generation_enabled":False,"generation_reason":"No verified model adapter, durable job queue, user authentication or private render storage is configured.","checks":{"worker_token_configured":bool(WORKER_TOKEN),"worker_heartbeat_fresh":connected,"model_adapter_verified":False,"durable_job_queue":False,"private_result_storage":False,"user_authentication":False,"successful_render_verified":False}}
+    return {"api":"ready","worker":"connected" if connected else "offline","engine":"preflight_agent_connected" if connected else "not_configured","generation_enabled":False,"generation_reason":"No verified model adapter, durable job queue, user authentication or private render storage is configured.","checks":{"worker_token_configured":bool(WORKER_TOKEN),"worker_heartbeat_fresh":connected,"worker_diagnostics_received":bool(_worker.get("diagnostics")) if connected else False,"model_adapter_verified":False,"durable_job_queue":False,"private_result_storage":False,"user_authentication":False,"successful_render_verified":False}}
 
 @app.get("/api/capabilities")
 def capabilities():
     fresh=worker_fresh()
-    return {"api_version":APP_VERSION,"generation_enabled":False,"reason":"No verified inference adapter, durable queue, user authentication or private result storage is configured.","worker":{"connected":fresh,"worker_id":_worker["worker_id"] if fresh else None,"engine":_worker["engine"] if fresh else None,"engine_ready_reported":bool(_worker["engine_ready"]) if fresh else False,"capabilities":_worker["capabilities"] if fresh else []},"supported_request_modes":["text","image"],"planned_features":["verified_model_adapters","durable_generation_jobs","reference_image_conditioning","private_result_storage","authenticated_project_sync"]}
+    return {"api_version":APP_VERSION,"generation_enabled":False,"reason":"No verified inference adapter, durable queue, user authentication or private result storage is configured.","worker":{"connected":fresh,"worker_id":_worker["worker_id"] if fresh else None,"engine":_worker["engine"] if fresh else None,"engine_ready_reported":False,"capabilities":_worker["capabilities"] if fresh else [],"diagnostics":_worker["diagnostics"] if fresh else {},"supported_request_modes":["text","image"],"planned_features":["verified_model_adapters","durable_generation_jobs","reference_image_conditioning","private_result_storage","authenticated_project_sync"]}
 
 @app.get("/api/models")
 def models():
@@ -109,14 +110,14 @@ def worker_preflight():
 def worker_heartbeat(payload:WorkerHeartbeat,x_worker_token:str|None=Header(default=None)):
     require_worker_token(x_worker_token)
     with _lock:
-        _worker.update(connected=True,worker_id=payload.worker_id,engine=payload.engine,engine_ready=payload.engine_ready,capabilities=payload.capabilities,last_seen=time.time())
+        _worker.update(connected=True,worker_id=payload.worker_id,engine=payload.engine,engine_ready=False,capabilities=payload.capabilities,diagnostics=payload.diagnostics,last_seen=time.time())
         _events.append({"time":int(time.time()),"kind":"worker_heartbeat","detail":payload.worker_id})
     return {"accepted":True,"worker_id":payload.worker_id,"generation_enabled":False}
 
 @app.get("/api/worker/status")
 def worker_status():
     fresh=worker_fresh()
-    return {"connected":fresh,"worker_id":_worker["worker_id"] if fresh else None,"engine":_worker["engine"] if fresh else None,"engine_ready_reported":bool(_worker["engine_ready"]) if fresh else False,"last_seen_seconds_ago":round(time.time()-_worker["last_seen"],1) if fresh else None,"generation_enabled":False}
+    return {"connected":fresh,"worker_id":_worker["worker_id"] if fresh else None,"engine":_worker["engine"] if fresh else None,"engine_ready_reported":False,"last_seen_seconds_ago":round(time.time()-_worker["last_seen"],1) if fresh else None,"diagnostics":_worker["diagnostics"] if fresh else {},"generation_enabled":False}
 
 @app.post("/api/generate",status_code=503)
 def generate(request:GenerateRequest):
