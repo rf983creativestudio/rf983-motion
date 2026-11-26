@@ -22,7 +22,7 @@
   </div>
 </aside>
 <main class="main-area">
-<header class="topbar"><div class="crumb"><span>RF983 MOTION</span><b>/</b><strong id="crumb-current">Studio</strong></div><div class="top-actions"><span class="privacy"><i></i> PRIVATE BUILD</span><button class="icon-button" id="export-project" title="Export project JSON">⇩</button><button class="save-button" id="save-project">Save draft <span>⌘S</span></button></div></header>
+<header class="topbar"><div class="crumb"><span>RF983 MOTION</span><b>/</b><strong id="crumb-current">Studio</strong></div><div class="top-actions"><span class="privacy"><i></i> PRIVATE BUILD</span><button class="icon-button" id="export-project" title="Export project JSON">⇩</button><button class="icon-button" id="import-project" title="Import project JSON">⇧</button><input id="import-file" type="file" accept="application/json,.json" hidden><button class="save-button" id="save-project">Save draft <span>⌘S</span></button></div></header>
 <section class="view active" id="view-studio">
   <div class="hero-heading"><div><div class="eyebrow">CREATIVE INTELLIGENCE / WORKSPACE 001</div><h1>Turn vision into <i>cinema.</i></h1><p>Shape the scene. Direct every frame. Build something unforgettable.</p></div><div class="project-meta"><span class="meta-label">CURRENT PROJECT</span><input id="project-name" value="Untitled cinematic project" maxlength="70" aria-label="Project name"><span class="autosave" id="save-state">LOCAL DRAFT · NOT SAVED</span></div></div>
   <div class="studio-layout">
@@ -31,7 +31,7 @@
         <div class="panel-heading"><div><span class="step-number">01</span><div><span class="eyebrow">THE CREATIVE BRIEF</span><h2>Describe your film</h2></div></div><span class="panel-note">PROMPT STUDIO</span></div>
         <label class="field-label" for="prompt">MASTER PROMPT</label>
         <textarea id="prompt" maxlength="4000" placeholder="Describe the subject, action, environment, atmosphere and visual intent. Be precise about what happens and how the camera sees it."></textarea>
-        <div class="prompt-footer"><span id="prompt-count">0 / 4000</span><button class="text-action" id="prompt-guide">✧ Prompt director</button></div>
+        <div class="prompt-footer"><span id="prompt-count">0 / 4000</span><button class="text-action" id="prompt-guide">✧ Prompt director</button></div><div class="prompt-insights" id="prompt-insights" aria-live="polite"><span>Prompt quality</span><b id="prompt-score">Awaiting brief</b><small id="prompt-advice">Describe a subject, action, setting, camera and lighting for a stronger shot brief.</small></div>
         <div class="prompt-tools"><div><label for="negative-prompt">NEGATIVE PROMPT <span class="optional">OPTIONAL</span></label><input id="negative-prompt" placeholder="e.g. flicker, warped hands, text, artifacts"></div><button class="small-outline" id="build-prompt">Build prompt ↗</button></div>
         <div class="prompt-builder">
           <div class="builder-head"><b>Director's notes</b><span>Structured creative controls</span></div>
@@ -49,7 +49,7 @@
       </div>
       <div class="panel storyboard-mini">
         <div class="panel-heading compact"><div><span class="step-number">03</span><div><span class="eyebrow">SEQUENCE DESIGN</span><h2>Shot storyboard</h2></div></div><button class="text-action" data-go="storyboard">Open shot planner ↗</button></div>
-        <div class="shot-strip" id="shot-strip"></div>
+        <div class="shot-strip" id="shot-strip"></div><div class="timeline-wrap"><div class="timeline-head"><b>Sequence timeline</b><span id="timeline-label">15 seconds planned</span></div><div class="timeline-track" id="timeline-track" aria-label="Storyboard timeline"></div></div>
       </div>
     </section>
     <aside class="settings-column">
@@ -81,7 +81,7 @@
 </section>
 <section class="view" id="view-library">
   <div class="page-heading"><div><div class="eyebrow">YOUR PRIVATE WORKSPACE / 03</div><h1>Project <i>library.</i></h1><p>Drafts saved in this browser only. No account sync or cloud storage is configured.</p></div><button class="primary-button" id="new-project">＋ New project</button></div>
-  <div class="library-toolbar"><div><b>Saved drafts</b><span id="library-count">0 projects</span></div><button class="small-outline" id="clear-library">Clear local library</button></div>
+  <div class="library-toolbar"><div><b>Saved drafts</b><span id="library-count">0 projects</span></div><div class="library-actions"><button class="small-outline" id="import-library">Import project</button><button class="small-outline" id="clear-library">Clear local library</button></div></div>
   <div class="library-grid" id="library-grid"></div>
 </section>
 <section class="view" id="view-models">
@@ -105,7 +105,7 @@
   </div>
   <div class="panel reality-panel"><b>Zero-budget reality check</b><p>GitHub can store source code and host a static interface; it cannot run a cinematic video model. High-quality generation requires GPU time, model storage and bandwidth. We will keep the project private, avoid committing large weights or secrets, and only enable generation after a real worker and secure job pipeline are configured.</p></div>
 </section>
-<footer class="app-footer"><span>RF983 MOTION · BUILD 0.4.0</span><span>PRIVATE CREATIVE TECHNOLOGY PROJECT</span><span>DESIGNED FOR THE FRAME</span></footer>
+<footer class="app-footer"><span>RF983 MOTION · BUILD 0.5.0</span><span>PRIVATE CREATIVE TECHNOLOGY PROJECT</span><span>DESIGNED FOR THE FRAME</span></footer>
 </main>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
