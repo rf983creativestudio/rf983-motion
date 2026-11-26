@@ -1,5 +1,6 @@
 """RF983 MOTION API: diagnostics and fail-closed inference foundation."""
 import hmac, importlib.util, os, platform, shutil, subprocess, time, sqlite3, json
+from contextlib import contextmanager
 from threading import Lock
 from typing import Any
 from collections import deque
@@ -34,11 +35,23 @@ def _state_connection():
     db.execute("""CREATE TABLE IF NOT EXISTS worker_history (id INTEGER PRIMARY KEY AUTOINCREMENT, worker_id TEXT NOT NULL, engine TEXT NOT NULL, observed_at REAL NOT NULL, diagnostics_json TEXT NOT NULL)""")
     db.execute("CREATE INDEX IF NOT EXISTS idx_worker_history_time ON worker_history(observed_at DESC)")
     return db
+@contextmanager
+def _state_db():
+    db=_state_connection()
+    try:
+        yield db
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
 def _record_worker_heartbeat(worker_id,engine,diagnostics):
     payload=json.dumps(diagnostics,ensure_ascii=False,separators=(",",":"))
     if len(payload.encode("utf-8"))>16000:
         raise HTTPException(413,detail={"code":"DIAGNOSTICS_TOO_LARGE","message":"Worker diagnostics exceed the 16 KB history limit."})
-    with _state_connection() as db:
+    with _state_db() as db:
         db.execute("INSERT INTO worker_history(worker_id,engine,observed_at,diagnostics_json) VALUES(?,?,?,?)",(worker_id,engine,time.time(),payload))
         db.execute("DELETE FROM worker_history WHERE id NOT IN (SELECT id FROM worker_history ORDER BY observed_at DESC LIMIT 250)")
 def _worker_history(limit):
