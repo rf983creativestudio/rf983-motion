@@ -10,7 +10,7 @@ def test_health_reports_inference_offline():
     response = client.get("/api/health")
     assert response.status_code == 200
     assert response.json()["inference"] == "offline"
-    assert response.json()["version"] == "0.9.0"
+    assert response.json()["version"] == "1.1.0"
 
 def test_capabilities_do_not_claim_generation():
     response = client.get("/api/capabilities")
