@@ -1,4 +1,6 @@
 import time
+import os
+from concurrent.futures import ThreadPoolExecutor
 import pytest
 from app.job_store import JobStore, JobStoreError, JobNotFound, InvalidJobTransition
 
@@ -83,7 +85,9 @@ def test_unknown_job_is_explicit(tmp_path):
 
 
 def test_postgresql_storage_is_recognized_without_connecting():
-    q = JobStore("postgresql://user:password@db.example.invalid:5432/rf983")
+    q = JobStore.__new__(JobStore)
+    q.database = "postgresql://user:password@db.example.invalid:5432/rf983"
+    q.is_postgres = True
     info = q.storage_info()
     assert info["kind"] == "postgresql"
     assert info["durable"] is True
@@ -97,3 +101,20 @@ def test_sqlite_storage_reports_ephemeral_container_path():
     assert info["kind"] == "sqlite"
     assert info["ephemeral"] is True
     assert info["durable"] is False
+
+
+@pytest.mark.skipif(not os.getenv("RF983_TEST_POSTGRES_URL"), reason="PostgreSQL integration service is not configured")
+def test_postgresql_queue_concurrent_claims_and_completion():
+    q = JobStore(os.environ["RF983_TEST_POSTGRES_URL"])
+    with q._connect() as db:
+        db.execute("DELETE FROM generation_jobs")
+    first = q.enqueue({"prompt": "PostgreSQL queue integration A"})
+    second = q.enqueue({"prompt": "PostgreSQL queue integration B"})
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        claims = list(pool.map(lambda worker: q.claim(worker, lease_seconds=60), ["gpu-a", "gpu-b"]))
+    assert all(claim is not None for claim in claims)
+    assert {claim["id"] for claim in claims} == {first["id"], second["id"]}
+    for claim in claims:
+        completed = q.complete(claim["id"], claim["worker_id"], {"verified": True})
+        assert completed["status"] == "succeeded"
+        assert completed["result"]["verified"] is True
