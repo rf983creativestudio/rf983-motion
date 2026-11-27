@@ -1,6 +1,7 @@
 """RF983 MOTION API: diagnostics and fail-closed inference foundation."""
 import hmac, importlib.util, os, platform, shutil, subprocess, time, sqlite3, json, hashlib, tempfile, math
-from app.job_store import JobStore, JobStoreError, JobNotFound, InvalidJobTransition\nfrom app.artifact_store import ArtifactStore, ArtifactNotFound
+from app.job_store import JobStore, JobStoreError, JobNotFound, InvalidJobTransition
+from app.artifact_store import ArtifactStore, ArtifactNotFound
 from app.engine_registry import list_engines, get_engine
 from app.engine_evaluation import evaluate_engines
 from contextlib import contextmanager
@@ -29,7 +30,10 @@ MODEL_CATALOG=[
 ]
 
 STATE_DB=os.getenv("RF983_STATE_DB","./data/rf983-motion.sqlite3")
-QUEUE_DB=os.getenv("RF983_QUEUE_DB")\nARTIFACT_DB=os.getenv("RF983_ARTIFACT_DB",STATE_DB)\nARTIFACT_DIR=os.getenv("RF983_ARTIFACT_DIR","/tmp/rf983-artifacts")\nMAX_ARTIFACT_BYTES=int(os.getenv("RF983_MAX_ARTIFACT_BYTES",str(2*1024*1024*1024)))
+QUEUE_DB=os.getenv("RF983_QUEUE_DB")
+ARTIFACT_DB=os.getenv("RF983_ARTIFACT_DB",STATE_DB)
+ARTIFACT_DIR=os.getenv("RF983_ARTIFACT_DIR","/tmp/rf983-artifacts")
+MAX_ARTIFACT_BYTES=int(os.getenv("RF983_MAX_ARTIFACT_BYTES",str(2*1024*1024*1024)))
 def _state_connection():
     path=os.path.abspath(STATE_DB)
     os.makedirs(os.path.dirname(path),exist_ok=True)
@@ -276,7 +280,9 @@ def operations_control_room(x_operations_token:str|None=Header(default=None)):
             "ephemeral": ephemeral,
             "description": "Worker-history SQLite file. Temporary container filesystem; records may be lost on restart or redeploy." if ephemeral else "Worker-history SQLite file; persistence depends on the hosting volume policy.",
         },
-        "queue_storage": _jobs().storage_info(),\n        "artifacts": _artifacts().snapshot(limit=20),\n        "artifact_storage": _artifacts().storage_info(),
+        "queue_storage": _jobs().storage_info(),
+        "artifacts": _artifacts().snapshot(limit=20),
+        "artifact_storage": _artifacts().storage_info(),
         "generation_enabled": False,
         "provider_calls_enabled": False,
         "creative_payloads_included": False,
