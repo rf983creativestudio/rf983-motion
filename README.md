@@ -2,6 +2,13 @@
 
 RF983 MOTION is a private, self-hostable foundation for a cinematic AI video-generation workspace.
 
+## Build 1.3.0 — GitHub Pages and backend connection layer
+- Model Lab accepts a configurable HTTPS backend origin and remembers only that non-secret address in this browser.
+- Added a live API connection indicator and public health, model-catalog and readiness verification from the GitHub Pages frontend.
+- Render Blueprint explicitly allows the GitHub Pages origin through FastAPI CORS.
+- Operations tokens remain in page memory only; they are not persisted.
+- Added a step-by-step Render Blueprint connection guide. This does not enable video generation.
+
 ## Build 1.2.0 — Protected queue operations API
 - Exposed private operations-token-protected endpoints to enqueue, inspect, list and cancel validated generation requests.
 - Queue metadata remains bounded in SQLite; queue API never starts inference or returns public media URLs.
@@ -77,7 +84,7 @@ See [worker setup](worker/README.md) and [engine adapter contract](docs/ENGINE_A
 - Request-size guard, baseline response security headers, Docker Compose local stack and API tests.
 
 ## Public deployment — Render
-See [Deployment 0.9.0](docs/DEPLOYMENT_0.9.0.md). The repository includes a Render Blueprint and a root Dockerfile for a single-service deployment.
+See [Deployment 0.9.0](docs/DEPLOYMENT_0.9.0.md) and [GitHub Pages ↔ Render backend connection](docs/GITHUB_PAGES_BACKEND_CONNECTION.md). The repository includes a Render Blueprint and a root Dockerfile for a single-service deployment.
 
 ## Quick start — Docker Compose
 Copy `.env.example` to `.env`, set two different long random secrets (`RF983_WORKER_TOKEN` and `RF983_OPERATIONS_TOKEN`), then run:
