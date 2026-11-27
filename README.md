@@ -108,6 +108,9 @@ uvicorn app.main:app --reload
 - `GET /api/worker/status` — heartbeat freshness (requires `X-Operations-Token`).
 - `GET /api/worker/history?limit=12` — latest persisted worker preflight reports (requires `X-Operations-Token`; maximum 50 per request; 250 retained).
 - `GET /api/operations/summary` — operational summary and generation gate state (requires `X-Operations-Token`).
+- `POST /api/operations/queue/jobs` — enqueue a validated internal job (requires `X-Operations-Token`; returns 202, does not run inference).
+- `GET /api/operations/queue/jobs?limit=25` and `GET /api/operations/queue/jobs/{job_id}` — inspect private queue records (requires `X-Operations-Token`).
+- `POST /api/operations/queue/jobs/{job_id}/cancel` — cancel a non-terminal queue record (requires `X-Operations-Token`).
 - `POST /api/worker/heartbeat` — authenticated worker heartbeat using `X-Worker-Token`.
 - `POST /api/generate` — deliberately returns 503 until inference is genuinely verified.
 
