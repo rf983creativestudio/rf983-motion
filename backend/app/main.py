@@ -199,7 +199,7 @@ def operations_summary(x_operations_token:str|None=Header(default=None)):
         count=db.execute("SELECT COUNT(*) FROM worker_history").fetchone()[0]
     return {"api_version":APP_VERSION,"uptime_seconds":int(time.time()-_started),"worker_connected":fresh,
             "worker_id":_worker["worker_id"] if fresh else None,"worker_history_records":count,
-            "queued_jobs":_jobs().list(100).count if False else sum(1 for item in _jobs().list(100) if item["status"]=="queued"),
+            "queued_jobs":sum(1 for item in _jobs().list(100) if item["status"]=="queued"),
             "generation_enabled":False,"production_state":"preflight-only","persistent_state":"sqlite"}
 
 
