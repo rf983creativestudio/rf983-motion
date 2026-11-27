@@ -22,7 +22,7 @@ ENGINE_CATALOG = [
     },
     {
         "id": "fal",
-        "name": " fal",
+        "name": "fal.ai",
         "kind": "hosted-inference",
         "connection": "provider-api",
         "credential_env": "RF983_FAL_API_KEY",
