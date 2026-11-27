@@ -1,6 +1,7 @@
 """RF983 MOTION API: diagnostics and fail-closed inference foundation."""
 import hmac, importlib.util, os, platform, shutil, subprocess, time, sqlite3, json
 from app.job_store import JobStore, JobStoreError, JobNotFound, InvalidJobTransition
+from app.engine_registry import list_engines, get_engine
 from contextlib import contextmanager
 from threading import Lock
 from typing import Any
@@ -10,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 
-APP_VERSION="1.3.0"
+APP_VERSION="1.4.0"
 ALLOWED_ORIGINS=[x.strip() for x in os.getenv("RF983_ALLOWED_ORIGINS","http://localhost:8000,http://127.0.0.1:8000").split(",") if x.strip()]
 WORKER_TOKEN=os.getenv("RF983_WORKER_TOKEN","")
 OPERATIONS_TOKEN=os.getenv("RF983_OPERATIONS_TOKEN","")
@@ -153,6 +154,41 @@ def capabilities():
 def models():
     """Candidate catalog; entries are never presented as installed or runnable."""
     return {"models":MODEL_CATALOG,"verified_model_count":0,"generation_enabled":False}
+
+@app.get("/api/engines")
+def engines():
+    """Public metadata for provider-neutral engine connection options."""
+    items = list_engines()
+    return {
+        "engines": items,
+        "engine_count": len(items),
+        "configured_engine_count": 0,
+        "verified_engine_count": 0,
+        "generation_enabled": False,
+        "provider_calls_enabled": False,
+        "security_note": "No provider credentials are accepted or transmitted by this registry endpoint."
+    }
+
+@app.get("/api/engines/{engine_id}")
+def engine_detail(engine_id: str):
+    """Return one engine descriptor; never returns credential values."""
+    item = get_engine(engine_id)
+    if item is None:
+        raise HTTPException(404, detail={"code":"ENGINE_NOT_FOUND","message":"Engine is not in the registry."})
+    return {"engine": item, "generation_enabled": False, "provider_calls_enabled": False}
+
+@app.get("/api/operations/engine-status")
+def private_engine_status(x_operations_token:str|None=Header(default=None)):
+    require_operations_token(x_operations_token)
+    items = list_engines()
+    return {
+        "engines": items,
+        "configured_engine_count": 0,
+        "verified_engine_count": 0,
+        "generation_enabled": False,
+        "provider_calls_enabled": False,
+        "message": "Registry only. Provider credentials and live endpoint verification are not configured."
+    }
 
 @app.get("/api/system/worker-preflight")
 def worker_preflight(x_operations_token:str|None=Header(default=None)):
