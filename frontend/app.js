@@ -4,6 +4,7 @@ const $ = (selector, root=document) => root.querySelector(selector);
 const $$ = (selector, root=document) => Array.from(root.querySelectorAll(selector));
 const STORAGE_KEY = "rf983-motion-projects-v2";
 const DRAFT_KEY = "rf983-motion-active-v2";
+const API_BASE_KEY = "rf983-motion-api-base-v1";
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const state = { shots: [], reference: null, activeView: "studio", projects: [], previewUrl: null };
 const defaultShots = () => [
@@ -12,6 +13,7 @@ const defaultShots = () => [
   {id:makeId(),name:"Final detail",framing:"Close-up",camera:"Gentle orbit",action:"End on a meaningful visual detail or emotional beat.",duration:5}
 ];
 function makeId(){return "s"+Math.random().toString(36).slice(2,10)}
+function setApiBadge(state,label){const badge=$("#api-connection-pill");if(!badge)return;badge.textContent=label;badge.classList.remove("connected","disconnected","unconfigured");badge.classList.add(state);}
 function escapeHtml(value){return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function getShots(){return state.shots}
 function totalDuration(){return state.shots.reduce((sum,shot)=>sum+Number(shot.duration||0),0)}
@@ -58,8 +60,12 @@ function renderWorkerHistory(items){
 async function refreshDiagnostics(){
  const button=$("#refresh-diagnostics"),host=$("#diagnostic-results"),note=$("#diagnostic-note");
  let base=$("#api-base").value.trim();
- while(base.endsWith("/"))base=base.slice(0,-1);
- if(!(base.startsWith("http://")||base.startsWith("https://"))){note.textContent="Enter a valid HTTP or HTTPS API address.";return}
+ if(!base){setApiBadge("unconfigured","API NOT SET");note.textContent="Paste the backend service URL from Render (for example, https://your-service.onrender.com), then connect again.";return}
+ let parsed;
+ try{parsed=new URL(base)}catch(error){setApiBadge("disconnected","API INVALID");note.textContent="Enter a complete backend URL, including https://.";return}
+ if(!["http:","https:"].includes(parsed.protocol)||parsed.username||parsed.password||parsed.search||parsed.hash||parsed.pathname!=="/"){setApiBadge("disconnected","API INVALID");note.textContent="Use only the backend HTTPS origin, without credentials, a path, query or fragment.";return}
+ if(location.protocol==="https:"&&parsed.protocol!=="https:"){setApiBadge("disconnected","API HTTPS REQUIRED");note.textContent="The live studio requires an HTTPS backend address; browsers block insecure HTTP API calls from this HTTPS site.";return}
+ base=parsed.origin;
  const opsToken=$("#operations-token").value.trim();
  const privateHeaders=opsToken?{"X-Operations-Token":opsToken}:{};
  button.disabled=true;button.textContent="Checking…";note.textContent="Checking public service health and protected operations…";
@@ -69,6 +75,8 @@ async function refreshDiagnostics(){
   const publicResponses=await Promise.all(publicPaths.map(path=>fetch(base+path,{headers:{Accept:"application/json"},cache:"no-store"})));
   if(publicResponses.some(r=>!r.ok))throw new Error("The public API health check returned an error.");
   const [health,models,ready]=await Promise.all(publicResponses.map(r=>r.json()));
+  try{localStorage.setItem(API_BASE_KEY,base)}catch(error){}
+  setApiBadge("connected","API CONNECTED");
   let worker=null,history=null,opsError="";
   if(opsToken){
    const privatePaths=["/api/worker/status","/api/worker/history?limit=12","/api/operations/summary"];
@@ -99,7 +107,8 @@ async function refreshDiagnostics(){
   note.textContent=opsError+" A connected heartbeat or detected GPU does not prove a video can be rendered.";
  }catch(error){
   host.innerHTML=row("API connection","Could not reach "+base,"UNAVAILABLE","offline")+row("GPU worker","Cannot verify without API","UNKNOWN","offline")+row("Verified models","Cannot verify without API","UNKNOWN","offline")+row("Generation pipeline","Must remain disabled","DISABLED","offline");
-  note.textContent="Check the API address and that the service is running. "+error.message;
+  setApiBadge("disconnected","API OFFLINE");
+  note.textContent="Could not reach the backend. Check that the Render service is deployed, the URL is correct, and RF983_ALLOWED_ORIGINS includes https://rf983creativestudio.github.io. "+error.message;
  }finally{button.disabled=false;button.textContent="Run system check ↻"}
 }
 let autosaveHandle=null;
@@ -246,6 +255,6 @@ document.addEventListener("input",e=>{if(e.target.matches("input,textarea,select
 document.addEventListener("change",e=>{if(e.target.matches("input,textarea,select")&&!e.target.matches("#import-file,#reference-image")){scheduleDraftSave();renderProductionDesk()}});
 document.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="s"){e.preventDefault();saveProjectToLibrary()}});
 }
-function init(){const apiInput=$("#api-base");if(apiInput&&(location.protocol==="http:"||location.protocol==="https:"))apiInput.value=location.origin;state.shots=defaultShots();state.projects=getProjects();try{const draft=JSON.parse(localStorage.getItem(DRAFT_KEY)||"null");if(draft)applyForm(draft);else renderAll()}catch(e){renderAll()}bindEvents();renderAll()}
+function init(){const apiInput=$("#api-base");if(apiInput){let savedApi="";try{savedApi=localStorage.getItem(API_BASE_KEY)||""}catch(error){}const githubPages=location.hostname.endsWith(".github.io");apiInput.value=savedApi||(!githubPages?location.origin:"");setApiBadge("unconfigured",savedApi?"API READY TO CHECK":"API NOT SET")}state.shots=defaultShots();state.projects=getProjects();try{const draft=JSON.parse(localStorage.getItem(DRAFT_KEY)||"null");if(draft)applyForm(draft);else renderAll()}catch(e){renderAll()}bindEvents();renderAll()}
 init();
 })();
