@@ -1,5 +1,6 @@
 """RF983 MOTION API: diagnostics and fail-closed inference foundation."""
 import hmac, importlib.util, os, platform, shutil, subprocess, time, sqlite3, json
+from app.job_store import JobStore, JobStoreError, JobNotFound, InvalidJobTransition
 from contextlib import contextmanager
 from threading import Lock
 from typing import Any
@@ -9,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 
-APP_VERSION="1.1.0"
+APP_VERSION="1.2.0"
 ALLOWED_ORIGINS=[x.strip() for x in os.getenv("RF983_ALLOWED_ORIGINS","http://localhost:8000,http://127.0.0.1:8000").split(",") if x.strip()]
 WORKER_TOKEN=os.getenv("RF983_WORKER_TOKEN","")
 OPERATIONS_TOKEN=os.getenv("RF983_OPERATIONS_TOKEN","")
@@ -199,6 +200,54 @@ def operations_summary(x_operations_token:str|None=Header(default=None)):
     return {"api_version":APP_VERSION,"uptime_seconds":int(time.time()-_started),"worker_connected":fresh,
             "worker_id":_worker["worker_id"] if fresh else None,"worker_history_records":count,
             "generation_enabled":False,"production_state":"preflight-only","persistent_state":"sqlite"}
+
+
+
+def _jobs():
+    return JobStore(STATE_DB)
+
+def _job_public(item, include_payload=False):
+    data={key:item.get(key) for key in ("id","status","created_at","updated_at","attempts","max_attempts","worker_id","lease_expires_at","error_code","error_message")}
+    if include_payload:
+        data["payload"]=item.get("payload")
+    data["result"]=item.get("result")
+    return data
+
+@app.post("/api/operations/queue/jobs", status_code=202)
+def enqueue_private_job(request:GenerateRequest,x_operations_token:str|None=Header(default=None)):
+    require_operations_token(x_operations_token)
+    try:
+        item=_jobs().enqueue(request.model_dump(),max_attempts=2)
+    except JobStoreError as exc:
+        raise HTTPException(422,detail={"code":"INVALID_QUEUE_JOB","message":str(exc)})
+    return {"accepted":True,"generation_enabled":False,"job":_job_public(item)}
+
+@app.get("/api/operations/queue/jobs")
+def list_private_jobs(limit:int=25,x_operations_token:str|None=Header(default=None)):
+    require_operations_token(x_operations_token)
+    if limit<1 or limit>100:
+        raise HTTPException(422,detail={"code":"INVALID_QUEUE_LIMIT","message":"Limit must be between 1 and 100."})
+    return {"items":[_job_public(item) for item in _jobs().list(limit)],"limit":limit,"generation_enabled":False}
+
+@app.get("/api/operations/queue/jobs/{job_id}")
+def get_private_job(job_id:str,x_operations_token:str|None=Header(default=None)):
+    require_operations_token(x_operations_token)
+    try:
+        return {"job":_job_public(_jobs().get(job_id),include_payload=True),"generation_enabled":False}
+    except JobNotFound:
+        raise HTTPException(404,detail={"code":"JOB_NOT_FOUND","message":"Queue job was not found."})
+
+@app.post("/api/operations/queue/jobs/{job_id}/cancel")
+def cancel_private_job(job_id:str,x_operations_token:str|None=Header(default=None)):
+    require_operations_token(x_operations_token)
+    try:
+        item=_jobs().cancel(job_id)
+        return {"cancelled":True,"job":_job_public(item),"generation_enabled":False}
+    except JobNotFound:
+        raise HTTPException(404,detail={"code":"JOB_NOT_FOUND","message":"Queue job was not found."})
+    except InvalidJobTransition:
+        raise HTTPException(409,detail={"code":"JOB_NOT_CANCELLABLE","message":"A terminal queue job cannot be cancelled."})
+
 
 @app.post("/api/generate",status_code=503)
 def generate(request:GenerateRequest):
