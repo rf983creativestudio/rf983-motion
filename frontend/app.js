@@ -18,7 +18,7 @@ function escapeHtml(value){return String(value??"").replace(/[&<>"']/g,c=>({"&":
 function getShots(){return state.shots}
 function totalDuration(){return state.shots.reduce((sum,shot)=>sum+Number(shot.duration||0),0)}
 function toast(message){const el=$("#toast");el.textContent=message;el.classList.add("show");clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove("show"),2300)}
-function setView(name){state.activeView=name;$$(".view").forEach(v=>v.classList.toggle("active",v.id==="view-"+name));$$(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.view===name));$("#crumb-current").textContent=({studio:"Studio",storyboard:"Storyboard",library:"My projects",models:"Model lab"})[name]||"Studio";if(name==="storyboard")renderShotEditor();if(name==="library")renderLibrary();window.scrollTo({top:0,behavior:"smooth"})}
+function setView(name){state.activeView=name;$$(".view").forEach(v=>v.classList.toggle("active",v.id==="view-"+name));$$(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.view===name));$("#crumb-current").textContent=({studio:"Studio",storyboard:"Storyboard",library:"My projects",models:"Model lab"})[name]||"Studio";if(name==="storyboard")renderShotEditor();if(name==="library")renderLibrary();if(name==="models")refreshEngineRegistry();window.scrollTo({top:0,behavior:"smooth"})}
 function readForm(){return {name:$("#project-name").value.trim()||"Untitled cinematic project",prompt:$("#prompt").value,negativePrompt:$("#negative-prompt").value,subject:$("#subject").value,environment:$("#environment").value,lighting:$("#lighting").value,mood:$("#mood").value,model:$("#model").value,aspect:$("#aspect").value,resolution:$("#resolution").value,duration:$("#duration").value,fps:$("#fps").value,quality:$("#quality").value,seed:$("#seed").value,audio:$("#audio").checked,refine:$("#refine").checked,shots:state.shots.map(s=>({...s})),reference:state.reference?{name:state.reference.name,type:state.reference.type,size:state.reference.size}:null,updatedAt:new Date().toISOString()}}
 function applyForm(data){if(!data)return;const fields=["project-name","prompt","negative-prompt","subject","environment","lighting","mood","model","aspect","resolution","duration","fps","quality","seed"];const keys=["name","prompt","negativePrompt","subject","environment","lighting","mood","model","aspect","resolution","duration","fps","quality","seed"];fields.forEach((id,i)=>{if(data[keys[i]]!==undefined)$("#"+id).value=data[keys[i]]});if(data.audio!==undefined)$("#audio").checked=!!data.audio;if(data.refine!==undefined)$("#refine").checked=!!data.refine;if(Array.isArray(data.shots)&&data.shots.length)state.shots=data.shots.map(s=>({...s}));renderAll()}
 function saveDraft(silent=false){const data=readForm();try{localStorage.setItem(DRAFT_KEY,JSON.stringify(data));$("#save-state").textContent="SAVED LOCALLY · "+new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});if(!silent)toast("Draft saved in this browser.");return true}catch(e){if(!silent)toast("Could not save locally. Browser storage may be full.");return false}}
@@ -56,6 +56,30 @@ function renderWorkerHistory(items){
   const when=new Date(Number(item.observed_at)*1000),stamp=Number.isNaN(when.getTime())?"Unknown time":when.toLocaleString();
   return '<article class="history-item"><div class="history-time"><b>'+escapeHtml(stamp)+'</b><small>'+escapeHtml(item.worker_id||"local worker")+'</small></div><div class="history-facts"><span>'+escapeHtml(gpu)+'</span><span>FFmpeg '+(tools.ffmpeg?"available":"missing")+'</span><span>Python '+escapeHtml(d.python||"unknown")+'</span><span>Disk '+escapeHtml(String(d.disk_free_gb??"—"))+' GB free</span></div></article>';
  }).join("");
+}
+async function refreshEngineRegistry(){
+ const host=$("#engine-registry-grid"),summary=$("#engine-summary"),note=$("#engine-registry-note"),button=$("#refresh-engines");
+ if(!host)return;
+ const base=$("#api-base")?.value.trim();
+ if(!base){host.innerHTML='<div class="engine-registry-empty">Add your Render backend URL in System Control Centre, then refresh this registry.</div>';note.textContent="Backend URL is not configured.";return}
+ let origin;
+ try{const parsed=new URL(base);if(!["https:","http:"].includes(parsed.protocol)||parsed.username||parsed.password||parsed.pathname!=="/"||parsed.search||parsed.hash)throw new Error();origin=parsed.origin}catch(error){host.innerHTML='<div class="engine-registry-empty">Backend URL is invalid. Use the HTTPS service origin only.</div>';return}
+ if(location.protocol==="https:"&&origin.startsWith("http:")){host.innerHTML='<div class="engine-registry-empty">An HTTPS backend is required by this secure website.</div>';return}
+ if(button){button.disabled=true;button.textContent="Loading…"}
+ host.innerHTML='<div class="engine-registry-empty">Loading engine registry…</div>';
+ try{
+  const response=await fetch(origin+"/api/engines",{headers:{Accept:"application/json"},cache:"no-store"});
+  if(!response.ok)throw new Error("Registry returned HTTP "+response.status);
+  const data=await response.json(),items=Array.isArray(data.engines)?data.engines:[];
+  summary.innerHTML='<span><b>'+Number(data.engine_count||items.length)+'</b><small>REGISTERED</small></span><span><b>'+Number(data.configured_engine_count||0)+'</b><small>CONFIGURED</small></span><span><b>'+Number(data.verified_engine_count||0)+'</b><small>VERIFIED</small></span><span><b>'+ (data.generation_enabled?"ON":"OFF")+'</b><small>GENERATION</small></span>';
+  host.innerHTML=items.map(item=>{
+   const stateLabel=item.verified?"VERIFIED":item.enabled?"ENABLED · UNVERIFIED":"NOT CONFIGURED";
+   const kind=item.verified?"ready":"offline";
+   return '<article class="engine-registry-card"><div class="engine-registry-card-top"><span class="engine-kind">'+escapeHtml(String(item.kind||"engine").replaceAll("-"," "))+'</span><span class="engine-status '+kind+'">'+stateLabel+'</span></div><h3>'+escapeHtml(item.name)+'</h3><p>'+escapeHtml(item.notes||"Connection route registered.")+'</p><dl><div><dt>CONNECTION</dt><dd>'+escapeHtml(item.connection||"—")+'</dd></div><div><dt>CREDENTIAL VARIABLE</dt><dd><code>'+escapeHtml(item.credential_env||"Not specified")+'</code></dd></div><div><dt>BILLING</dt><dd>'+escapeHtml(item.billing||"Depends on provider")+'</dd></div><div><dt>DATA HANDLING</dt><dd>'+escapeHtml(item.data_handling||"Review provider terms before use")+'</dd></div></dl><div class="engine-registry-foot"><span>'+ (item.generation_supported?"Generation capability declared":"Generation unavailable")+'</span><b>'+stateLabel+'</b></div></article>';
+  }).join("")||'<div class="engine-registry-empty">The backend returned no registered engines.</div>';
+  note.textContent="Registry loaded from "+origin+". Provider calls: "+(data.provider_calls_enabled?"enabled":"disabled")+". No prompts or assets were sent.";
+ }catch(error){host.innerHTML='<div class="engine-registry-empty">Could not load registry: '+escapeHtml(error.message)+'. Confirm the backend is deployed and its CORS origin includes this GitHub Pages site.</div>';note.textContent="Registry unavailable. No provider requests were made."}
+ finally{if(button){button.disabled=false;button.textContent="Refresh registry ↻"}}
 }
 async function refreshDiagnostics(){
  const button=$("#refresh-diagnostics"),host=$("#diagnostic-results"),note=$("#diagnostic-note");
@@ -226,6 +250,7 @@ function bindEvents(){
 $$(".nav-item").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
 $$("[data-go]").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.go)));
 $("#refresh-diagnostics").addEventListener("click",refreshDiagnostics);
+$("#refresh-engines").addEventListener("click",refreshEngineRegistry);
 $("#refresh-history").addEventListener("click",refreshDiagnostics);
 $("#run-production-check").addEventListener("click",()=>{renderProductionDesk();toast("Pre-production checks refreshed.")});
 $("#export-director-brief").addEventListener("click",exportDirectorBrief);
