@@ -22,7 +22,7 @@
   </div>
 </aside>
 <main class="main-area">
-<header class="topbar"><div class="crumb"><span>RF983 MOTION</span><b>/</b><strong id="crumb-current">Studio</strong></div><div class="top-actions"><span class="privacy"><i></i> PRIVATE BUILD</span><button class="icon-button" id="export-project" title="Export project JSON">⇩</button><button class="icon-button" id="import-project" title="Import project JSON">⇧</button><input id="import-file" type="file" accept="application/json,.json" hidden><button class="save-button" id="save-project">Save draft <span>⌘S</span></button></div></header>
+<header class="topbar"><div class="crumb"><span>RF983 MOTION</span><b>/</b><strong id="crumb-current">Studio</strong></div><div class="top-actions"><span class="api-connection-pill unconfigured" id="api-connection-pill" title="Backend connection status">API NOT SET</span><span class="privacy"><i></i> PRIVATE BUILD</span><button class="icon-button" id="export-project" title="Export project JSON">⇩</button><button class="icon-button" id="import-project" title="Import project JSON">⇧</button><input id="import-file" type="file" accept="application/json,.json" hidden><button class="save-button" id="save-project">Save draft <span>⌘S</span></button></div></header>
 <section class="view active" id="view-studio">
   <div class="hero-heading"><div><div class="eyebrow">CREATIVE INTELLIGENCE / WORKSPACE 001</div><h1>Turn vision into <i>cinema.</i></h1><p>Shape the scene. Direct every frame. Build something unforgettable.</p></div><div class="project-meta"><span class="meta-label">CURRENT PROJECT</span><input id="project-name" value="Untitled cinematic project" maxlength="70" aria-label="Project name"><span class="autosave" id="save-state">LOCAL DRAFT · NOT SAVED</span></div></div>
   <div class="studio-layout">
@@ -141,14 +141,14 @@
   <div class="panel architecture-panel" id="live-diagnostics">
     <div class="eyebrow">LIVE CONNECTION CHECK / PRIVATE OPERATIONS</div><h2>System <i>control centre.</i></h2>
     <p class="helper">Public service health is visible to everyone. Machine diagnostics, worker identity and stored history require the private operations token configured on the server.</p>
-    <div class="diagnostic-controls"><label for="api-base">API ADDRESS</label><input id="api-base" type="url" value="http://localhost:8080" spellcheck="false" autocomplete="url"><label for="operations-token">PRIVATE OPERATIONS TOKEN</label><input id="operations-token" type="password" placeholder="Paste server RF983_OPERATIONS_TOKEN" spellcheck="off" autocomplete="off"><button class="small-outline" id="refresh-diagnostics" type="button">Run system check ↻</button></div>
+    <div class="diagnostic-controls"><label for="api-base">BACKEND SERVICE URL</label><input id="api-base" type="url" value="" placeholder="https://your-rf983-motion-service.onrender.com" spellcheck="false" autocomplete="url"><label for="operations-token">PRIVATE OPERATIONS TOKEN</label><input id="operations-token" type="password" placeholder="Paste server RF983_OPERATIONS_TOKEN" spellcheck="off" autocomplete="off"><button class="small-outline" id="refresh-diagnostics" type="button">Connect &amp; verify API ↻</button></div><small class="helper">Paste the HTTPS URL created when you deploy the Render Blueprint. The address is saved in this browser; private tokens are never saved.</small>
     <div class="architecture-list" id="diagnostic-results" aria-live="polite">
       <div><span class="arch-dot offline"></span><b>API connection</b><small>Not checked yet</small><em>UNKNOWN</em></div>
       <div><span class="arch-dot offline"></span><b>GPU worker</b><small>Not checked yet</small><em>UNKNOWN</em></div>
       <div><span class="arch-dot offline"></span><b>Verified models</b><small>Not checked yet</small><em>UNKNOWN</em></div>
       <div><span class="arch-dot offline"></span><b>Generation pipeline</b><small>Remains disabled until every production gate passes</small><em>DISABLED</em></div>
     </div>
-    <small id="diagnostic-note" class="helper">The API must be running and allow this frontend origin. Local-only drafts stay in this browser.</small>
+    <small id="diagnostic-note" class="helper">The API must be deployed separately and allow this frontend origin. Only the non-secret API address is saved in this browser; operations tokens remain in page memory only. Local-only drafts stay in this browser.</small>
   </div>
     <div class="panel architecture-panel history-panel" id="worker-history">
       <div class="history-heading"><div><div class="eyebrow">PRIVATE MACHINE RECORD / LAST 250 REPORTS</div><h2>Worker history</h2><p class="helper">Local API history survives restarts when the database volume is retained. Only machine preflight metadata is recorded.</p></div><button class="small-outline" id="refresh-history" type="button">Refresh history ↻</button></div>
@@ -157,7 +157,7 @@
     </div>
   <div class="panel reality-panel"><b>Zero-budget reality check</b><p>GitHub can store source code and host a static interface; it cannot run a cinematic video model. High-quality generation requires GPU time, model storage and bandwidth. We will keep the project private, avoid committing large weights or secrets, and only enable generation after a real worker and secure job pipeline are configured.</p></div>
 </section>
-<footer class="app-footer"><span>RF983 MOTION · BUILD 1.0.0</span><span>PRIVATE CREATIVE TECHNOLOGY PROJECT</span><span>DESIGNED FOR THE FRAME</span></footer>
+<footer class="app-footer"><span>RF983 MOTION · BUILD 1.3.0</span><span>PRIVATE CREATIVE TECHNOLOGY PROJECT</span><span>DESIGNED FOR THE FRAME</span></footer>
 </main>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
