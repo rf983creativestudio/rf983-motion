@@ -130,7 +130,7 @@ def health():
 @app.get("/api/system/ready")
 def system_ready():
     connected=worker_fresh()
-    return {"api":"ready","worker":"connected" if connected else "offline","engine":"preflight_agent_connected" if connected else "not_configured","generation_enabled":False,"generation_reason":"No verified model adapter, durable job queue, user authentication or private render storage is configured.","checks":{"worker_token_configured":bool(WORKER_TOKEN),"worker_heartbeat_fresh":connected,"worker_diagnostics_received":bool(_worker.get("diagnostics")) if connected else False,"model_adapter_verified":False,"durable_job_queue":False,"private_result_storage":False,"user_authentication":False,"successful_render_verified":False,"persistent_worker_history":True}}
+    return {"api":"ready","worker":"connected" if connected else "offline","engine":"preflight_agent_connected" if connected else "not_configured","generation_enabled":False,"generation_reason":"No verified model adapter, user authentication or private render storage is configured.","checks":{"worker_token_configured":bool(WORKER_TOKEN),"worker_heartbeat_fresh":connected,"worker_diagnostics_received":bool(_worker.get("diagnostics")) if connected else False,"model_adapter_verified":False,"durable_job_queue":True,"private_result_storage":False,"user_authentication":False,"successful_render_verified":False,"persistent_worker_history":True}}
 
 @app.get("/api/capabilities")
 def capabilities():
@@ -138,7 +138,7 @@ def capabilities():
     return {
         "api_version":APP_VERSION,
         "generation_enabled":False,
-        "reason":"No verified inference adapter, durable queue, user authentication or private result storage is configured.",
+        "reason":"No verified inference adapter, user authentication or private result storage is configured.",
         "worker":{
             "connected":fresh,
             "worker_connected":fresh,
@@ -199,6 +199,7 @@ def operations_summary(x_operations_token:str|None=Header(default=None)):
         count=db.execute("SELECT COUNT(*) FROM worker_history").fetchone()[0]
     return {"api_version":APP_VERSION,"uptime_seconds":int(time.time()-_started),"worker_connected":fresh,
             "worker_id":_worker["worker_id"] if fresh else None,"worker_history_records":count,
+            "queued_jobs":_jobs().list(100).count if False else sum(1 for item in _jobs().list(100) if item["status"]=="queued"),
             "generation_enabled":False,"production_state":"preflight-only","persistent_state":"sqlite"}
 
 
