@@ -10,7 +10,7 @@ def test_health_reports_inference_offline():
     response = client.get("/api/health")
     assert response.status_code == 200
     assert response.json()["inference"] == "offline"
-    assert response.json()["version"] == "1.1.0"
+    assert response.json()["version"] == "1.2.0"
 
 def test_capabilities_do_not_claim_generation():
     response = client.get("/api/capabilities")
@@ -139,3 +139,38 @@ def test_public_capabilities_do_not_expose_machine_diagnostics(monkeypatch):
     assert data["worker"]["worker_connected"] is True
     assert "diagnostics" not in data["worker"]
     assert "worker_id" not in data["worker"]
+
+
+def test_private_queue_endpoints_require_operations_token(monkeypatch):
+    monkeypatch.setattr("app.main.OPERATIONS_TOKEN","queue-secret")
+    response=client.post("/api/operations/queue/jobs",json={"prompt":"A cinematic ocean scene"})
+    assert response.status_code==401
+
+def test_private_queue_lifecycle(monkeypatch,tmp_path):
+    monkeypatch.setattr("app.main.OPERATIONS_TOKEN","queue-secret")
+    monkeypatch.setattr("app.main.STATE_DB",str(tmp_path/"queue.sqlite3"))
+    headers={"X-Operations-Token":"queue-secret"}
+    created=client.post("/api/operations/queue/jobs",headers=headers,json={"prompt":"A cinematic ocean scene","duration_seconds":8})
+    assert created.status_code==202
+    body=created.json()
+    assert body["accepted"] is True and body["generation_enabled"] is False
+    job_id=body["job"]["id"]
+    listed=client.get("/api/operations/queue/jobs",headers=headers).json()
+    assert listed["items"][0]["id"]==job_id
+    detail=client.get(f"/api/operations/queue/jobs/{job_id}",headers=headers).json()
+    assert detail["job"]["payload"]["duration_seconds"]==8
+    cancelled=client.post(f"/api/operations/queue/jobs/{job_id}/cancel",headers=headers)
+    assert cancelled.status_code==200 and cancelled.json()["job"]["status"]=="cancelled"
+    again=client.post(f"/api/operations/queue/jobs/{job_id}/cancel",headers=headers)
+    assert again.status_code==409
+
+def test_private_queue_unknown_job_returns_404(monkeypatch,tmp_path):
+    monkeypatch.setattr("app.main.OPERATIONS_TOKEN","queue-secret")
+    monkeypatch.setattr("app.main.STATE_DB",str(tmp_path/"queue.sqlite3"))
+    response=client.get("/api/operations/queue/jobs/missing",headers={"X-Operations-Token":"queue-secret"})
+    assert response.status_code==404
+
+def test_generate_endpoint_stays_disabled_after_queue_added():
+    response=client.post("/api/generate",json={"prompt":"A cinematic ocean scene"})
+    assert response.status_code==503
+    assert response.json()["detail"]["code"]=="INFERENCE_NOT_CONFIGURED"
