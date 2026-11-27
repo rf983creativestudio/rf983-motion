@@ -10,7 +10,7 @@ def test_health_reports_inference_offline():
     response = client.get("/api/health")
     assert response.status_code == 200
     assert response.json()["inference"] == "offline"
-    assert response.json()["version"] == "1.9.0"
+    assert response.json()["version"] == "2.0.0"
 
 def test_capabilities_do_not_claim_generation():
     response = client.get("/api/capabilities")
@@ -112,7 +112,7 @@ def test_operations_summary_keeps_generation_disabled(monkeypatch,tmp_path):
     monkeypatch.setattr("app.main.STATE_DB",str(tmp_path/"ops.sqlite3"))
     monkeypatch.setattr("app.main.OPERATIONS_TOKEN","ops-secret")
     data=client.get("/api/operations/summary",headers={"X-Operations-Token":"ops-secret"}).json()
-    assert data["api_version"]=="1.9.0" and data["persistent_state"]=="sqlite"
+    assert data["api_version"]=="2.0.0" and data["persistent_state"]=="sqlite"
     assert data["generation_enabled"] is False
 
 
@@ -325,3 +325,68 @@ def test_mp4_probe_rejects_unverified_video(monkeypatch):
     with pytest.raises(HTTPException) as error:
         api._probe_mp4("/tmp/not-a-video.mp4")
     assert error.value.status_code==422
+
+
+def test_worker_execution_claim_hides_payload_from_unauthenticated_clients(monkeypatch,tmp_path):
+    import app.main as api
+    monkeypatch.setattr(api,"WORKER_TOKEN","worker-secret")
+    monkeypatch.setattr(api,"OPERATIONS_TOKEN","ops-secret")
+    monkeypatch.setattr(api,"STATE_DB",str(tmp_path/"execution.sqlite3"))
+    queued=client.post("/api/operations/queue/jobs",headers={"X-Operations-Token":"ops-secret"},json={"prompt":"A cinematic mountain sunrise"})
+    job_id=queued.json()["job"]["id"]
+    denied=client.post("/api/worker/jobs/claim",headers={"X-Worker-ID":"gpu-node-01"})
+    assert denied.status_code==401
+    claimed=client.post("/api/worker/jobs/claim",headers={"X-Worker-Token":"worker-secret","X-Worker-ID":"gpu-node-01"})
+    assert claimed.status_code==200
+    assert claimed.json()["claimed"] is True
+    assert claimed.json()["job"]["id"]==job_id
+    assert claimed.json()["job"]["payload"]["prompt"]=="A cinematic mountain sunrise"
+    assert claimed.json()["generation_enabled"] is False
+
+def test_worker_execution_lease_renewal_and_expiry_guard(monkeypatch,tmp_path):
+    import app.main as api
+    monkeypatch.setattr(api,"WORKER_TOKEN","worker-secret")
+    monkeypatch.setattr(api,"STATE_DB",str(tmp_path/"lease.sqlite3"))
+    job=api._jobs().enqueue({"prompt":"A cinematic ocean scene"})
+    claimed=api._jobs().claim("gpu-node-01",lease_seconds=30)
+    headers={"X-Worker-Token":"worker-secret","X-Worker-ID":"gpu-node-01"}
+    renewed=client.post(f"/api/worker/jobs/{job['id']}/heartbeat",headers=headers)
+    assert renewed.status_code==200 and renewed.json()["renewed"] is True
+    wrong=client.post(f"/api/worker/jobs/{job['id']}/heartbeat",headers={"X-Worker-Token":"worker-secret","X-Worker-ID":"other-node"})
+    assert wrong.status_code==409
+
+def test_worker_cannot_complete_without_matching_validated_artifact(monkeypatch,tmp_path):
+    import app.main as api
+    monkeypatch.setattr(api,"WORKER_TOKEN","worker-secret")
+    monkeypatch.setattr(api,"OPERATIONS_TOKEN","ops-secret")
+    monkeypatch.setattr(api,"STATE_DB",str(tmp_path/"complete.sqlite3"))
+    monkeypatch.setattr(api,"ARTIFACT_DB",str(tmp_path/"artifacts.sqlite3"))
+    monkeypatch.setattr(api,"ARTIFACT_DIR",str(tmp_path/"artifacts"))
+    job=api._jobs().enqueue({"prompt":"A cinematic forest scene"})
+    api._jobs().claim("gpu-node-01")
+    headers={"X-Worker-Token":"worker-secret","X-Worker-ID":"gpu-node-01"}
+    missing=client.post(f"/api/worker/jobs/{job['id']}/complete",headers=headers,json={"artifact_id":"a"*32})
+    assert missing.status_code==404
+    assert api._jobs().get(job["id"])["status"]=="running"
+
+def test_worker_artifact_upload_requires_active_job_lease(monkeypatch,tmp_path):
+    import app.main as api
+    monkeypatch.setattr(api,"WORKER_TOKEN","worker-secret")
+    monkeypatch.setattr(api,"STATE_DB",str(tmp_path/"upload-lease.sqlite3"))
+    monkeypatch.setattr(api,"ARTIFACT_DB",str(tmp_path/"upload-artifacts.sqlite3"))
+    monkeypatch.setattr(api,"ARTIFACT_DIR",str(tmp_path/"artifacts"))
+    job=api._jobs().enqueue({"prompt":"A cinematic city scene"})
+    headers={"X-Worker-Token":"worker-secret","X-Worker-ID":"gpu-node-01","X-Job-ID":job["id"],"Content-Type":"video/mp4"}
+    response=client.post("/api/worker/artifacts",headers=headers,content=b"video")
+    assert response.status_code==409
+    assert response.json()["detail"]["code"]=="JOB_LEASE_REQUIRED"
+
+def test_worker_failure_endpoint_retries_only_with_valid_lease(monkeypatch,tmp_path):
+    import app.main as api
+    monkeypatch.setattr(api,"WORKER_TOKEN","worker-secret")
+    monkeypatch.setattr(api,"STATE_DB",str(tmp_path/"failure.sqlite3"))
+    job=api._jobs().enqueue({"prompt":"A cinematic desert scene"},max_attempts=2)
+    api._jobs().claim("gpu-node-01")
+    response=client.post(f"/api/worker/jobs/{job['id']}/fail",headers={"X-Worker-Token":"worker-secret","X-Worker-ID":"gpu-node-01"},json={"error_code":"ENGINE_NOT_READY","message":"No verified model adapter is configured.","retry":False})
+    assert response.status_code==200
+    assert response.json()["job"]["status"]=="failed"

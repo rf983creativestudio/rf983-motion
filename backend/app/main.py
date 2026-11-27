@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from pydantic import BaseModel, Field, field_validator
 
-APP_VERSION="1.9.0"
+APP_VERSION="2.0.0"
 ALLOWED_ORIGINS=[x.strip() for x in os.getenv("RF983_ALLOWED_ORIGINS","http://localhost:8000,http://127.0.0.1:8000").split(",") if x.strip()]
 WORKER_TOKEN=os.getenv("RF983_WORKER_TOKEN","")
 OPERATIONS_TOKEN=os.getenv("RF983_OPERATIONS_TOKEN","")
@@ -102,6 +102,14 @@ class WorkerHeartbeat(BaseModel):
     engine_ready:bool=False
     capabilities:list[str]=Field(default_factory=list,max_length=30)
     diagnostics:dict[str,Any]=Field(default_factory=dict)
+
+class WorkerFailure(BaseModel):
+    error_code:str=Field(min_length=1,max_length=80,pattern="^[A-Z0-9_.-]+$")
+    message:str=Field(min_length=1,max_length=500)
+    retry:bool=True
+
+class WorkerCompletion(BaseModel):
+    artifact_id:str=Field(min_length=32,max_length=32,pattern="^[a-f0-9]{32}$")
 
 def worker_fresh():
     return bool(_worker["last_seen"] and time.time()-_worker["last_seen"]<45)
@@ -344,9 +352,11 @@ async def upload_private_artifact(
             raise HTTPException(400, detail={"code":"INVALID_CONTENT_LENGTH","message":"Content-Length is invalid."})
     if x_job_id:
         try:
-            _jobs().get(x_job_id)
+            linked_job = _jobs().get(x_job_id)
         except JobNotFound:
             raise HTTPException(404, detail={"code":"JOB_NOT_FOUND","message":"The referenced queue job does not exist."})
+        if linked_job["status"] != "running" or linked_job.get("worker_id") != x_worker_id or (linked_job.get("lease_expires_at") or 0) < time.time():
+            raise HTTPException(409, detail={"code":"JOB_LEASE_REQUIRED","message":"The artifact must be uploaded by the worker holding the active job lease."})
     os.makedirs(ARTIFACT_DIR, exist_ok=True)
     fd, temporary_path = tempfile.mkstemp(prefix=".rf983-upload-", suffix=".mp4.part", dir=ARTIFACT_DIR)
     digest = hashlib.sha256()
@@ -408,6 +418,78 @@ def _queue_database():
 
 def _jobs():
     return JobStore(_queue_database())
+
+@app.post("/api/worker/jobs/claim")
+def claim_worker_job(
+    x_worker_token:str|None=Header(default=None),
+    x_worker_id:str=Header(min_length=3,max_length=80,pattern="^[a-zA-Z0-9._-]+$"),
+    lease_seconds:int=300,
+):
+    """Claim one queued job and disclose its creative payload only to an authenticated worker."""
+    require_worker_token(x_worker_token)
+    try:
+        item=_jobs().claim(x_worker_id,lease_seconds=lease_seconds)
+    except JobStoreError as exc:
+        raise HTTPException(422,detail={"code":"INVALID_JOB_CLAIM","message":str(exc)})
+    if item is None:
+        return {"claimed":False,"job":None,"worker_execution_protocol":"2.0","generation_enabled":False}
+    return {"claimed":True,"job":{"id":item["id"],"payload":item["payload"],"attempts":item["attempts"],"lease_expires_at":item["lease_expires_at"]},"worker_execution_protocol":"2.0","generation_enabled":False}
+
+@app.post("/api/worker/jobs/{job_id}/heartbeat")
+def heartbeat_worker_job(
+    job_id:str,
+    x_worker_token:str|None=Header(default=None),
+    x_worker_id:str=Header(min_length=3,max_length=80,pattern="^[a-zA-Z0-9._-]+$"),
+    lease_seconds:int=300,
+):
+    require_worker_token(x_worker_token)
+    try:
+        item=_jobs().heartbeat(job_id,x_worker_id,lease_seconds=lease_seconds)
+        return {"renewed":True,"job_id":item["id"],"lease_expires_at":item["lease_expires_at"],"generation_enabled":False}
+    except JobNotFound:
+        raise HTTPException(404,detail={"code":"JOB_NOT_FOUND","message":"Queue job was not found."})
+    except (InvalidJobTransition,JobStoreError) as exc:
+        raise HTTPException(409,detail={"code":"JOB_LEASE_LOST","message":str(exc)})
+
+@app.post("/api/worker/jobs/{job_id}/complete")
+def complete_worker_job(
+    job_id:str,
+    request:WorkerCompletion,
+    x_worker_token:str|None=Header(default=None),
+    x_worker_id:str=Header(min_length=3,max_length=80,pattern="^[a-zA-Z0-9._-]+$"),
+):
+    """Mark success only when this leased worker uploaded the matching validated MP4."""
+    require_worker_token(x_worker_token)
+    try:
+        job=_jobs().get(job_id)
+        artifact=_artifacts().get(request.artifact_id)
+    except JobNotFound:
+        raise HTTPException(404,detail={"code":"JOB_NOT_FOUND","message":"Queue job was not found."})
+    except ArtifactNotFound:
+        raise HTTPException(404,detail={"code":"ARTIFACT_NOT_FOUND","message":"Validated private artifact was not found."})
+    if artifact.get("job_id") != job_id or artifact.get("worker_id") != x_worker_id:
+        raise HTTPException(409,detail={"code":"ARTIFACT_JOB_MISMATCH","message":"The artifact must belong to this job and authenticated worker."})
+    try:
+        item=_jobs().complete(job_id,x_worker_id,{"artifact_id":artifact["id"],"sha256":artifact["sha256"],"size_bytes":artifact["size_bytes"],"duration_seconds":artifact["duration_seconds"],"width":artifact["width"],"height":artifact["height"],"video_codec":artifact["video_codec"]})
+    except (InvalidJobTransition,JobStoreError) as exc:
+        raise HTTPException(409,detail={"code":"JOB_COMPLETION_REJECTED","message":str(exc)})
+    return {"completed":True,"job":_job_public(item),"artifact":artifact,"generation_enabled":False}
+
+@app.post("/api/worker/jobs/{job_id}/fail")
+def fail_worker_job(
+    job_id:str,
+    request:WorkerFailure,
+    x_worker_token:str|None=Header(default=None),
+    x_worker_id:str=Header(min_length=3,max_length=80,pattern="^[a-zA-Z0-9._-]+$"),
+):
+    require_worker_token(x_worker_token)
+    try:
+        item=_jobs().fail(job_id,x_worker_id,request.error_code,request.message,retry=request.retry)
+        return {"accepted":True,"job":_job_public(item),"generation_enabled":False}
+    except JobNotFound:
+        raise HTTPException(404,detail={"code":"JOB_NOT_FOUND","message":"Queue job was not found."})
+    except (InvalidJobTransition,JobStoreError) as exc:
+        raise HTTPException(409,detail={"code":"JOB_FAILURE_REJECTED","message":str(exc)})
 
 def _job_public(item, include_payload=False):
     data={key:item.get(key) for key in ("id","status","created_at","updated_at","attempts","max_attempts","worker_id","lease_expires_at","error_code","error_message")}
