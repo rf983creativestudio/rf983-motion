@@ -112,7 +112,7 @@ def test_operations_summary_keeps_generation_disabled(monkeypatch,tmp_path):
     monkeypatch.setattr("app.main.STATE_DB",str(tmp_path/"ops.sqlite3"))
     monkeypatch.setattr("app.main.OPERATIONS_TOKEN","ops-secret")
     data=client.get("/api/operations/summary",headers={"X-Operations-Token":"ops-secret"}).json()
-    assert data["api_version"]=="0.9.0" and data["persistent_state"]=="sqlite"
+    assert data["api_version"]=="1.1.0" and data["persistent_state"]=="sqlite"
     assert data["generation_enabled"] is False
 
 
