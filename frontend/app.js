@@ -109,7 +109,7 @@ async function refreshDiagnostics(){
   host.innerHTML=row("API connection","Could not reach "+base,"UNAVAILABLE","offline")+row("GPU worker","Cannot verify without API","UNKNOWN","offline")+row("Verified models","Cannot verify without API","UNKNOWN","offline")+row("Generation pipeline","Must remain disabled","DISABLED","offline");
   setApiBadge("disconnected","API OFFLINE");
   note.textContent="Could not reach the backend. Check that the Render service is deployed, the URL is correct, and RF983_ALLOWED_ORIGINS includes https://rf983creativestudio.github.io. "+error.message;
- }finally{button.disabled=false;button.textContent="Run system check ↻"}
+ }finally{button.disabled=false;button.textContent="Connect & verify API ↻"}
 }
 let autosaveHandle=null;
 function scheduleDraftSave(){
