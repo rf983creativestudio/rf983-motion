@@ -2,6 +2,12 @@
 
 RF983 MOTION is a private, self-hostable foundation for a cinematic AI video-generation workspace.
 
+## Build 1.2.0 — Protected queue operations API
+- Exposed private operations-token-protected endpoints to enqueue, inspect, list and cancel validated generation requests.
+- Queue metadata remains bounded in SQLite; queue API never starts inference or returns public media URLs.
+- Added API tests for authorization, queue lifecycle, not-found handling and the fail-closed Generate endpoint.
+- The queue remains an internal control-plane component; no GPU worker is connected to it.
+
 ## Build 1.1.0 — Durable generation queue foundation
 - Added a provider-neutral SQLite job store with atomic worker claims, expiring leases, lease renewal, bounded retries, cancellation and terminal-state guards.
 - Added bounded JSON metadata persistence; reference-image bytes and rendered media are not stored in the queue database.
