@@ -119,3 +119,21 @@
 #engine-registry-note{display:block;margin-top:10px;line-height:1.5}
 @media(max-width:760px){.engine-registry-grid{grid-template-columns:1fr}.engine-control-head{flex-direction:column}.engine-control-head button{width:100%}}
 @media(max-width:420px){.engine-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.engine-registry-card dl>div{grid-template-columns:94px minmax(0,1fr)}.engine-privacy-note{display:block}.engine-privacy-note span{display:block;margin-top:5px}}
+
+
+/* Build 1.6.0 — engine evaluation and selection */
+.engine-evaluation-panel{padding:20px;margin:0 0 16px}
+.engine-evaluation-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+.engine-evaluation-head h2{font:500 22px Georgia,serif;margin:5px 0 6px}
+.engine-evaluation-head p{max-width:680px;margin:0}
+.engine-hold-pill{font-size:8px;letter-spacing:.1em;color:#e5c17e;border:1px solid #5a4a38;border-radius:30px;padding:8px 10px;white-space:nowrap}
+.engine-decision{padding:15px;margin:16px 0;border:1px solid #5a4a38;background:#1c1b15;border-radius:8px}
+.engine-decision>b{font-size:13px;color:#f0d39b}.engine-decision p{font-size:10px;color:#c8c0ad;line-height:1.6;margin:7px 0}.engine-decision small{font-size:8px;color:#e1c48d;line-height:1.5}
+.engine-evaluation-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.engine-evaluation-card{min-width:0;padding:14px;border:1px solid var(--line);background:#0d151c;border-radius:8px}
+.engine-evaluation-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.engine-evaluation-card h3{font-size:13px;margin:0}.engine-evaluation-card-top span{font-size:8px;color:#e6c17d;text-transform:uppercase;letter-spacing:.08em}
+.engine-evaluation-card p{font-size:10px;line-height:1.5;color:#b9c8c4;min-height:30px}
+.engine-evaluation-card div>b{font-size:8px;letter-spacing:.08em;color:var(--accent)}.engine-evaluation-card ul{padding-left:16px;margin:6px 0 12px}.engine-evaluation-card li{font-size:9px;line-height:1.5;color:var(--muted);margin:4px 0}
+.engine-evaluation-foot{display:flex;gap:12px;padding:12px;margin-top:13px;border:1px solid #30443e;background:#101a19;border-radius:7px}.engine-evaluation-foot b{font-size:10px;color:var(--accent);white-space:nowrap}.engine-evaluation-foot span{font-size:9px;color:#b7c4bd;line-height:1.55}
+@media(max-width:760px){.engine-evaluation-head{flex-direction:column}.engine-evaluation-grid{grid-template-columns:1fr}.engine-evaluation-foot{display:block}.engine-evaluation-foot span{display:block;margin-top:5px}}
