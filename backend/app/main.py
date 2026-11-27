@@ -2,6 +2,7 @@
 import hmac, importlib.util, os, platform, shutil, subprocess, time, sqlite3, json
 from app.job_store import JobStore, JobStoreError, JobNotFound, InvalidJobTransition
 from app.engine_registry import list_engines, get_engine
+from app.engine_evaluation import evaluate_engines
 from contextlib import contextmanager
 from threading import Lock
 from typing import Any
@@ -11,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 
-APP_VERSION="1.4.0"
+APP_VERSION="1.6.0"
 ALLOWED_ORIGINS=[x.strip() for x in os.getenv("RF983_ALLOWED_ORIGINS","http://localhost:8000,http://127.0.0.1:8000").split(",") if x.strip()]
 WORKER_TOKEN=os.getenv("RF983_WORKER_TOKEN","")
 OPERATIONS_TOKEN=os.getenv("RF983_OPERATIONS_TOKEN","")
@@ -168,6 +169,12 @@ def engines():
         "provider_calls_enabled": False,
         "security_note": "No provider credentials are accepted or transmitted by this registry endpoint."
     }
+
+
+@app.get("/api/engine-evaluation")
+def engine_evaluation():
+    """Conservative architecture guidance; no provider requests or user data transfer."""
+    return evaluate_engines()
 
 @app.get("/api/engines/{engine_id}")
 def engine_detail(engine_id: str):
