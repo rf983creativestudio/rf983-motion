@@ -29,7 +29,7 @@ def test_invalid_prompt_is_rejected():
 def test_readiness_lists_production_gates():
     data = client.get("/api/system/ready").json()
     assert data["generation_enabled"] is False
-    assert data["checks"]["durable_job_queue"] is False
+    assert data["checks"]["durable_job_queue"] is True
     assert data["checks"]["user_authentication"] is False
     assert data["checks"]["successful_render_verified"] is False
 
