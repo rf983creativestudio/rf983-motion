@@ -22,7 +22,7 @@ jobs:
           cache-dependency-path: backend/requirements.txt
       - run: pip install -r requirements.txt pytest httpx
       - run: pytest -q
-      - run: PYTHONPATH=.. python -m pytest ../worker/test_engine_contract.py ../worker/test_wan22_engine.py
+      - run: PYTHONPATH=.. python -m pytest tests/test_job_store.py ../worker/test_engine_contract.py ../worker/test_wan22_engine.py
       - run: python -m compileall -q ../worker
   frontend-smoke:
     runs-on: ubuntu-latest
