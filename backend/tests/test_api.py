@@ -10,7 +10,7 @@ def test_health_reports_inference_offline():
     response = client.get("/api/health")
     assert response.status_code == 200
     assert response.json()["inference"] == "offline"
-    assert response.json()["version"] == "1.3.0"
+    assert response.json()["version"] == "1.4.0"
 
 def test_capabilities_do_not_claim_generation():
     response = client.get("/api/capabilities")
@@ -112,7 +112,7 @@ def test_operations_summary_keeps_generation_disabled(monkeypatch,tmp_path):
     monkeypatch.setattr("app.main.STATE_DB",str(tmp_path/"ops.sqlite3"))
     monkeypatch.setattr("app.main.OPERATIONS_TOKEN","ops-secret")
     data=client.get("/api/operations/summary",headers={"X-Operations-Token":"ops-secret"}).json()
-    assert data["api_version"]=="1.3.0" and data["persistent_state"]=="sqlite"
+    assert data["api_version"]=="1.4.0" and data["persistent_state"]=="sqlite"
     assert data["generation_enabled"] is False
 
 
@@ -174,3 +174,29 @@ def test_generate_endpoint_stays_disabled_after_queue_added():
     response=client.post("/api/generate",json={"prompt":"A cinematic ocean scene"})
     assert response.status_code==503
     assert response.json()["detail"]["code"]=="INFERENCE_NOT_CONFIGURED"
+
+
+def test_engine_registry_is_provider_neutral_and_fail_closed():
+    data = client.get("/api/engines").json()
+    assert data["engine_count"] == 4
+    assert data["configured_engine_count"] == 0
+    assert data["verified_engine_count"] == 0
+    assert data["generation_enabled"] is False
+    assert data["provider_calls_enabled"] is False
+    assert all(item["enabled"] is False for item in data["engines"])
+    assert all("credential_env" in item for item in data["engines"])
+
+def test_engine_detail_and_unknown_engine():
+    found = client.get("/api/engines/custom-https")
+    assert found.status_code == 200
+    assert found.json()["engine"]["verified"] is False
+    missing = client.get("/api/engines/not-real")
+    assert missing.status_code == 404
+    assert missing.json()["detail"]["code"] == "ENGINE_NOT_FOUND"
+
+def test_private_engine_status_requires_operations_token(monkeypatch):
+    monkeypatch.setattr("app.main.OPERATIONS_TOKEN", "ops-secret")
+    assert client.get("/api/operations/engine-status").status_code == 401
+    response = client.get("/api/operations/engine-status", headers={"X-Operations-Token":"ops-secret"})
+    assert response.status_code == 200
+    assert response.json()["generation_enabled"] is False
