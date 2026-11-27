@@ -93,6 +93,13 @@
 </section>
 <section class="view" id="view-models">
   <div class="page-heading"><div><div class="eyebrow">INFERENCE RESEARCH / 04</div><h1>The <i>model lab.</i></h1><p>Evaluate model families before committing to hardware, weights or a deployment path.</p></div><span class="offline-pill"><i></i> NO GPU WORKER CONNECTED</span></div>
+  <div class="panel engine-control-panel" id="cloud-engine-centre">
+    <div class="engine-control-head"><div><div class="eyebrow">CLOUD INFERENCE / ENGINE GATEWAY 1.4.0</div><h2>Cloud engine <i>control centre.</i></h2><p class="helper">Inspect connection routes and their data, billing and verification requirements. This registry does not connect to providers or send prompts.</p></div><button class="small-outline" id="refresh-engines" type="button">Refresh registry ↻</button></div>
+    <div class="engine-summary" id="engine-summary"><span><b>—</b><small>REGISTERED</small></span><span><b>—</b><small>CONFIGURED</small></span><span><b>—</b><small>VERIFIED</small></span><span><b>OFF</b><small>GENERATION</small></span></div>
+    <div class="engine-registry-grid" id="engine-registry-grid" aria-live="polite"><div class="engine-registry-empty">Connect the backend and refresh to load the engine registry.</div></div>
+    <div class="engine-privacy-note"><b>Privacy and billing gate</b><span>Provider integrations may transmit prompts and reference assets and may incur charges. RF983 MOTION will not enable a provider, accept credentials or send creative data until you explicitly choose and configure an engine.</span></div>
+    <small class="helper" id="engine-registry-note">Registry status is metadata only. An engine listed here is not installed, configured or verified.</small>
+  </div>
   <div class="panel architecture-panel launch-panel">
     <div class="eyebrow">PUBLIC LAUNCH / DEPLOYMENT PACKAGE</div>
     <h2>One service. One secure entry point.</h2>
@@ -157,7 +164,7 @@
     </div>
   <div class="panel reality-panel"><b>Zero-budget reality check</b><p>GitHub can store source code and host a static interface; it cannot run a cinematic video model. High-quality generation requires GPU time, model storage and bandwidth. We will keep the project private, avoid committing large weights or secrets, and only enable generation after a real worker and secure job pipeline are configured.</p></div>
 </section>
-<footer class="app-footer"><span>RF983 MOTION · BUILD 1.3.0</span><span>PRIVATE CREATIVE TECHNOLOGY PROJECT</span><span>DESIGNED FOR THE FRAME</span></footer>
+<footer class="app-footer"><span>RF983 MOTION · BUILD 1.5.0</span><span>PRIVATE CREATIVE TECHNOLOGY PROJECT</span><span>DESIGNED FOR THE FRAME</span></footer>
 </main>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
