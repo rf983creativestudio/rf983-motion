@@ -16,3 +16,5 @@ services:
         value: /tmp/rf983-motion.sqlite3
       - key: RF983_MAX_BODY_BYTES
         value: "262144"
+      - key: RF983_ALLOWED_ORIGINS
+        value: https://rf983creativestudio.github.io
