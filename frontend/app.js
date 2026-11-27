@@ -117,7 +117,8 @@ async function downloadPrivateArtifact(artifactId){
   toast("Private artifact download started.");
  }catch(error){toast(error.message)}
 }
-\nasync function refreshEngineRegistry(){
+
+async function refreshEngineRegistry(){
  const host=$("#engine-registry-grid"),summary=$("#engine-summary"),note=$("#engine-registry-note"),button=$("#refresh-engines");
  if(!host)return;
  const base=$("#api-base")?.value.trim();
