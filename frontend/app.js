@@ -313,7 +313,8 @@ $$("[data-go]").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.go))
 $("#refresh-diagnostics").addEventListener("click",refreshDiagnostics);
 $("#refresh-engines").addEventListener("click",refreshEngineRegistry);
 $("#refresh-control-room").addEventListener("click",refreshControlRoom);
-$("#control-room-jobs").addEventListener("click",e=>{const button=e.target.closest("[data-cancel-job]");if(button)cancelControlRoomJob(button.dataset.cancelJob)});\n$("#control-room-artifacts").addEventListener("click",e=>{const button=e.target.closest("[data-download-artifact]");if(button)downloadPrivateArtifact(button.dataset.downloadArtifact)});
+$("#control-room-jobs").addEventListener("click",e=>{const button=e.target.closest("[data-cancel-job]");if(button)cancelControlRoomJob(button.dataset.cancelJob)});
+$("#control-room-artifacts").addEventListener("click",e=>{const button=e.target.closest("[data-download-artifact]");if(button)downloadPrivateArtifact(button.dataset.downloadArtifact)});
 $("#refresh-history").addEventListener("click",refreshDiagnostics);
 $("#run-production-check").addEventListener("click",()=>{renderProductionDesk();toast("Pre-production checks refreshed.")});
 $("#export-director-brief").addEventListener("click",exportDirectorBrief);
