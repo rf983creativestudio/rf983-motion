@@ -10,7 +10,7 @@ def test_health_reports_inference_offline():
     response = client.get("/api/health")
     assert response.status_code == 200
     assert response.json()["inference"] == "offline"
-    assert response.json()["version"] == "1.7.0"
+    assert response.json()["version"] == "1.8.0"
 
 def test_capabilities_do_not_claim_generation():
     response = client.get("/api/capabilities")
@@ -112,7 +112,7 @@ def test_operations_summary_keeps_generation_disabled(monkeypatch,tmp_path):
     monkeypatch.setattr("app.main.STATE_DB",str(tmp_path/"ops.sqlite3"))
     monkeypatch.setattr("app.main.OPERATIONS_TOKEN","ops-secret")
     data=client.get("/api/operations/summary",headers={"X-Operations-Token":"ops-secret"}).json()
-    assert data["api_version"]=="1.7.0" and data["persistent_state"]=="sqlite"
+    assert data["api_version"]=="1.8.0" and data["persistent_state"]=="sqlite"
     assert data["generation_enabled"] is False
 
 
@@ -242,3 +242,15 @@ def test_control_room_returns_safe_queue_snapshot_without_prompt_payload(monkeyp
     assert "payload" not in data["queue"]["items"][0]
     assert "Private cinematic test prompt" not in response.text
     assert data["storage"]["ephemeral"] is True
+    assert data["queue_storage"]["kind"] == "sqlite"
+    assert data["queue_storage"]["ephemeral"] is True
+
+
+def test_queue_database_can_be_configured_separately_from_worker_history(monkeypatch, tmp_path):
+    from app.main import _jobs
+    queue_path = str(tmp_path / "queue-only.sqlite3")
+    monkeypatch.setattr("app.main.QUEUE_DB", queue_path)
+    monkeypatch.setattr("app.main.STATE_DB", str(tmp_path / "history-only.sqlite3"))
+    item = _jobs().enqueue({"prompt": "A cinematic test"})
+    assert _jobs().get(item["id"])["status"] == "queued"
+    assert _jobs().storage_info()["kind"] == "sqlite"

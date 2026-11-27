@@ -80,3 +80,20 @@ def test_unknown_job_is_explicit(tmp_path):
     q = store(tmp_path)
     with pytest.raises(JobNotFound):
         q.get("missing")
+
+
+def test_postgresql_storage_is_recognized_without_connecting():
+    q = JobStore("postgresql://user:password@db.example.invalid:5432/rf983")
+    info = q.storage_info()
+    assert info["kind"] == "postgresql"
+    assert info["durable"] is True
+    assert info["ephemeral"] is False
+    assert "provider" in info["description"].lower()
+
+
+def test_sqlite_storage_reports_ephemeral_container_path():
+    q = JobStore("/tmp/rf983-test-queue.sqlite3")
+    info = q.storage_info()
+    assert info["kind"] == "sqlite"
+    assert info["ephemeral"] is True
+    assert info["durable"] is False

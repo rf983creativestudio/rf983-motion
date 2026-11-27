@@ -28,25 +28,45 @@ class InvalidJobTransition(JobStoreError):
     pass
 
 
+class _PostgresAdapter:
+    """Small DB-API compatibility layer for the queue's SQLite-style SQL."""
+    def __init__(self, connection):
+        self.connection = connection
+    def execute(self, statement, parameters=()):
+        statement = statement.replace("BEGIN IMMEDIATE", "BEGIN").replace("?", "%s")
+        return self.connection.execute(statement, parameters)
+    def commit(self): self.connection.commit()
+    def rollback(self): self.connection.rollback()
+    def __enter__(self): return self
+    def __exit__(self, exc_type, exc, traceback):
+        try:
+            if exc_type: self.rollback()
+            else: self.commit()
+        finally: self.connection.close()
+        return False
+
+
 class JobStore:
-    """SQLite queue with atomic claims, expiring leases and bounded retries."""
+    """Lease-based queue using SQLite locally or PostgreSQL when configured."""
 
     def __init__(self, database: str | Path, max_payload_bytes: int = 32_000):
         self.database = str(database)
         self.max_payload_bytes = max_payload_bytes
-        Path(self.database).parent.mkdir(parents=True, exist_ok=True)
+        self.is_postgres = self.database.startswith(("postgres://", "postgresql://"))
+        if not self.is_postgres:
+            Path(self.database).parent.mkdir(parents=True, exist_ok=True)
         with self._connect() as db:
             db.execute("""
                 CREATE TABLE IF NOT EXISTS generation_jobs (
                     id TEXT PRIMARY KEY,
                     status TEXT NOT NULL,
                     payload_json TEXT NOT NULL,
-                    created_at REAL NOT NULL,
-                    updated_at REAL NOT NULL,
+                    created_at DOUBLE PRECISION NOT NULL,
+                    updated_at DOUBLE PRECISION NOT NULL,
                     attempts INTEGER NOT NULL DEFAULT 0,
                     max_attempts INTEGER NOT NULL,
                     worker_id TEXT,
-                    lease_expires_at REAL,
+                    lease_expires_at DOUBLE PRECISION,
                     result_json TEXT,
                     error_code TEXT,
                     error_message TEXT
@@ -56,11 +76,25 @@ class JobStore:
             db.execute("CREATE INDEX IF NOT EXISTS idx_jobs_worker ON generation_jobs(worker_id, status)")
 
     def _connect(self):
+        if self.is_postgres:
+            try:
+                import psycopg
+                from psycopg.rows import dict_row
+            except ImportError as exc:
+                raise JobStoreError("PostgreSQL queue configured but psycopg is not installed.") from exc
+            return _PostgresAdapter(psycopg.connect(self.database, row_factory=dict_row, connect_timeout=8))
         db = sqlite3.connect(self.database, timeout=10, isolation_level=None)
         db.row_factory = sqlite3.Row
         db.execute("PRAGMA journal_mode=WAL")
         db.execute("PRAGMA busy_timeout=10000")
         return db
+
+    def storage_info(self) -> dict[str, Any]:
+        if self.is_postgres:
+            return {"kind":"postgresql","durable":True,"ephemeral":False,"description":"External PostgreSQL queue database. Durability, backups and retention depend on the database provider's plan and settings."}
+        path = str(Path(self.database).resolve())
+        ephemeral = path == "/tmp" or path.startswith("/tmp/")
+        return {"kind":"sqlite","durable":not ephemeral,"ephemeral":ephemeral,"description":"Temporary container filesystem; queue records may be lost on restart or redeploy." if ephemeral else "SQLite file storage; persistence depends on the host's volume and backup policy."}
 
     @staticmethod
     def _row(row: sqlite3.Row | None) -> dict[str, Any] | None:
@@ -126,9 +160,10 @@ class JobStore:
                     error_message=CASE WHEN attempts >= max_attempts THEN 'Worker lease expired; retry budget exhausted.' ELSE error_message END
                 WHERE status='running' AND lease_expires_at < ?
             """, (now, now))
-            row = db.execute(
-                "SELECT * FROM generation_jobs WHERE status='queued' AND attempts < max_attempts ORDER BY created_at LIMIT 1"
-            ).fetchone()
+            claim_sql = "SELECT * FROM generation_jobs WHERE status='queued' AND attempts < max_attempts ORDER BY created_at LIMIT 1"
+            if self.is_postgres:
+                claim_sql += " FOR UPDATE SKIP LOCKED"
+            row = db.execute(claim_sql).fetchone()
             if row is None:
                 db.commit()
                 return None

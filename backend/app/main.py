@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 
-APP_VERSION="1.7.0"
+APP_VERSION="1.8.0"
 ALLOWED_ORIGINS=[x.strip() for x in os.getenv("RF983_ALLOWED_ORIGINS","http://localhost:8000,http://127.0.0.1:8000").split(",") if x.strip()]
 WORKER_TOKEN=os.getenv("RF983_WORKER_TOKEN","")
 OPERATIONS_TOKEN=os.getenv("RF983_OPERATIONS_TOKEN","")
@@ -29,6 +29,7 @@ MODEL_CATALOG=[
 ]
 
 STATE_DB=os.getenv("RF983_STATE_DB","./data/rf983-motion.sqlite3")
+QUEUE_DB=os.getenv("RF983_QUEUE_DB")
 def _state_connection():
     path=os.path.abspath(STATE_DB)
     os.makedirs(os.path.dirname(path),exist_ok=True)
@@ -127,12 +128,12 @@ async def safety_headers(request:Request,call_next):
 
 @app.get("/api/health")
 def health():
-    return {"status":"ok","service":"rf983-motion-api","version":APP_VERSION,"inference":"offline","worker_agent_protocol":"0.7","state_store":"sqlite","persistent_worker_history":True,"uptime_seconds":int(time.time()-_started)}
+    return {"status":"ok","service":"rf983-motion-api","version":APP_VERSION,"inference":"offline","worker_agent_protocol":"0.7","state_store":"sqlite","queue_store":"postgresql" if (QUEUE_DB or STATE_DB).startswith(("postgres://","postgresql://")) else "sqlite","persistent_worker_history":True,"uptime_seconds":int(time.time()-_started)}
 
 @app.get("/api/system/ready")
 def system_ready():
     connected=worker_fresh()
-    return {"api":"ready","worker":"connected" if connected else "offline","engine":"preflight_agent_connected" if connected else "not_configured","generation_enabled":False,"generation_reason":"No verified model adapter, user authentication or private render storage is configured.","checks":{"worker_token_configured":bool(WORKER_TOKEN),"worker_heartbeat_fresh":connected,"worker_diagnostics_received":bool(_worker.get("diagnostics")) if connected else False,"model_adapter_verified":False,"durable_job_queue":True,"private_result_storage":False,"user_authentication":False,"successful_render_verified":False,"persistent_worker_history":True}}
+    return {"api":"ready","worker":"connected" if connected else "offline","engine":"preflight_agent_connected" if connected else "not_configured","generation_enabled":False,"generation_reason":"No verified model adapter, user authentication or private render storage is configured.","checks":{"worker_token_configured":bool(WORKER_TOKEN),"worker_heartbeat_fresh":connected,"worker_diagnostics_received":bool(_worker.get("diagnostics")) if connected else False,"model_adapter_verified":False,"durable_job_queue":True,"durable_queue_storage":_jobs().storage_info()["durable"],"private_result_storage":False,"user_authentication":False,"successful_render_verified":False,"persistent_worker_history":True}}
 
 @app.get("/api/capabilities")
 def capabilities():
@@ -273,16 +274,20 @@ def operations_control_room(x_operations_token:str|None=Header(default=None)):
         "storage": {
             "kind": "sqlite",
             "ephemeral": ephemeral,
-            "description": "Temporary container filesystem; records may be lost on restart or redeploy." if ephemeral else "Configured filesystem path; persistence depends on the hosting volume policy.",
+            "description": "Worker-history SQLite file. Temporary container filesystem; records may be lost on restart or redeploy." if ephemeral else "Worker-history SQLite file; persistence depends on the hosting volume policy.",
         },
+        "queue_storage": _jobs().storage_info(),
         "generation_enabled": False,
         "provider_calls_enabled": False,
         "creative_payloads_included": False,
     }
 
 
+def _queue_database():
+    return QUEUE_DB or STATE_DB
+
 def _jobs():
-    return JobStore(STATE_DB)
+    return JobStore(_queue_database())
 
 def _job_public(item, include_payload=False):
     data={key:item.get(key) for key in ("id","status","created_at","updated_at","attempts","max_attempts","worker_id","lease_expires_at","error_code","error_message")}

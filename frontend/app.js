@@ -72,7 +72,8 @@ async function refreshControlRoom(){
   if(!response.ok){if(response.status===401)throw new Error("Operations token was rejected. Check the token in System Control Centre.");if(response.status===503)throw new Error("Private operations authentication is not configured on the backend.");throw new Error("Control room returned HTTP "+response.status)}
   const data=await response.json(),q=data.queue||{},counts=q.counts||{};
   stats.innerHTML='<div><b>'+(data.worker?.connected?"ONLINE":"OFFLINE")+'</b><small>GPU WORKER</small></div><div><b>'+Number(counts.queued||0)+'</b><small>QUEUED</small></div><div><b>'+Number(counts.running||0)+'</b><small>RUNNING</small></div><div><b>'+Number(counts.succeeded||0)+'</b><small>SUCCEEDED</small></div><div><b>'+Number(counts.failed||0)+'</b><small>FAILED</small></div>';
-  storage.textContent=data.storage?.ephemeral?"EPHEMERAL SQLITE":"VOLUME-DEPENDENT SQLITE";
+  const queueStore=data.queue_storage||data.storage||{};
+  storage.textContent=queueStore.kind==="postgresql"?"POSTGRESQL QUEUE · EXTERNAL":queueStore.ephemeral?"EPHEMERAL SQLITE QUEUE":"VOLUME-DEPENDENT SQLITE QUEUE";
   const jobs=Array.isArray(q.items)?q.items:[];
   host.innerHTML=jobs.length?jobs.map(job=>{
    const canCancel=["queued","running"].includes(job.status);
@@ -81,7 +82,8 @@ async function refreshControlRoom(){
    return '<article class="control-room-job"><div class="control-room-job-main"><b>'+escapeHtml(job.id)+'</b><small>'+escapeHtml(stamp)+' · attempt '+Number(job.attempts||0)+'/'+Number(job.max_attempts||0)+'</small></div><span class="control-job-state '+escapeHtml(job.status)+'">'+escapeHtml(job.status)+'</span>'+(canCancel?'<button class="control-cancel" data-cancel-job="'+escapeHtml(job.id)+'" type="button">Cancel</button>':'')+'</article>';
   }).join(""):'<div class="engine-registry-empty">No generation jobs are recorded in this queue yet.</div>';
   status.textContent="Authenticated snapshot loaded · API "+escapeHtml(data.api?.version||"unknown")+" · "+Number(data.models?.verified_count||0)+" verified models · "+Number(data.engines?.verified_count||0)+" verified engines · generation "+(data.generation_enabled?"enabled":"disabled")+".";
-  if(data.storage?.ephemeral)status.textContent+=" Queue and worker-history records may be lost when the free Render container restarts or redeploys.";
+  if(queueStore.kind==="postgresql")status.textContent+=" Queue uses external PostgreSQL; provider backup and retention settings still apply.";
+  else if(queueStore.ephemeral)status.textContent+=" Queue records may be lost when the free Render container restarts or redeploys.";
  }catch(error){host.innerHTML='<div class="engine-registry-empty">'+escapeHtml(error.message)+'</div>';status.textContent="Control room unavailable. No prompts or assets were requested."}
  finally{if(button){button.disabled=false;button.textContent="Refresh control room ↻"}}
 }
