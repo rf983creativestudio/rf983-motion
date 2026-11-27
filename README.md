@@ -2,6 +2,13 @@
 
 RF983 MOTION is a private, self-hostable foundation for a cinematic AI video-generation workspace.
 
+## Build 1.1.0 — Durable generation queue foundation
+- Added a provider-neutral SQLite job store with atomic worker claims, expiring leases, lease renewal, bounded retries, cancellation and terminal-state guards.
+- Added bounded JSON metadata persistence; reference-image bytes and rendered media are not stored in the queue database.
+- Added queue lifecycle and lease-safety tests to GitHub Actions.
+- The queue is not yet connected to public API routes or a live worker; generation remains disabled.
+
+
 ## Build 1.0.0 — Wan 2.2 local engine bridge\n- Added a guarded execution bridge to the official Wan 2.2 TI2V-5B inference CLI for compatible local NVIDIA CUDA systems.\n- Hardware, CUDA/PyTorch, model-checkpoint, FFmpeg and ffprobe preflight checks; fail-closed below the documented 24 GB NVIDIA VRAM target.\n- Fixed-argument subprocess invocation, private render-directory containment and ffprobe validation of generated MP4 files.\n- Added CLI adapter tests and a Windows compatibility-check launcher.\n- No automatic weight downloads, hosted inference calls or prompt uploads.\n- The Studio/API generation endpoint remains disabled; this bridge is a local CLI integration pending a real render acceptance test and secure job pipeline.\n- The current Intel integrated-graphics laptop cannot run the selected cinematic model locally.\n\n## Build 0.9.0 — Public launch and protected operations
 - Single-service Docker image bundles the static studio and FastAPI behind same-origin Nginx routing.
 - Render Blueprint (`render.yaml`) and step-by-step deployment guide for a public HTTPS URL.
