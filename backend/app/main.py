@@ -1,6 +1,6 @@
 """RF983 MOTION API: diagnostics and fail-closed inference foundation."""
-import hmac, importlib.util, os, platform, shutil, subprocess, time, sqlite3, json
-from app.job_store import JobStore, JobStoreError, JobNotFound, InvalidJobTransition
+import hmac, importlib.util, os, platform, shutil, subprocess, time, sqlite3, json, hashlib, tempfile, math
+from app.job_store import JobStore, JobStoreError, JobNotFound, InvalidJobTransition\nfrom app.artifact_store import ArtifactStore, ArtifactNotFound
 from app.engine_registry import list_engines, get_engine
 from app.engine_evaluation import evaluate_engines
 from contextlib import contextmanager
@@ -9,10 +9,10 @@ from typing import Any
 from collections import deque
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from pydantic import BaseModel, Field, field_validator
 
-APP_VERSION="1.8.0"
+APP_VERSION="1.9.0"
 ALLOWED_ORIGINS=[x.strip() for x in os.getenv("RF983_ALLOWED_ORIGINS","http://localhost:8000,http://127.0.0.1:8000").split(",") if x.strip()]
 WORKER_TOKEN=os.getenv("RF983_WORKER_TOKEN","")
 OPERATIONS_TOKEN=os.getenv("RF983_OPERATIONS_TOKEN","")
@@ -29,7 +29,7 @@ MODEL_CATALOG=[
 ]
 
 STATE_DB=os.getenv("RF983_STATE_DB","./data/rf983-motion.sqlite3")
-QUEUE_DB=os.getenv("RF983_QUEUE_DB")
+QUEUE_DB=os.getenv("RF983_QUEUE_DB")\nARTIFACT_DB=os.getenv("RF983_ARTIFACT_DB",STATE_DB)\nARTIFACT_DIR=os.getenv("RF983_ARTIFACT_DIR","/tmp/rf983-artifacts")\nMAX_ARTIFACT_BYTES=int(os.getenv("RF983_MAX_ARTIFACT_BYTES",str(2*1024*1024*1024)))
 def _state_connection():
     path=os.path.abspath(STATE_DB)
     os.makedirs(os.path.dirname(path),exist_ok=True)
@@ -69,7 +69,7 @@ def _worker_history(limit):
         result.append({"worker_id":row["worker_id"],"engine":row["engine"],"observed_at":int(row["observed_at"]),"diagnostics":diag})
     return result
 app=FastAPI(title="RF983 MOTION API",version=APP_VERSION,description="Private API and inference-readiness foundation.",docs_url="/api/docs",redoc_url=None)
-app.add_middleware(CORSMiddleware,allow_origins=ALLOWED_ORIGINS,allow_credentials=False,allow_methods=["GET","POST"],allow_headers=["Content-Type","Authorization","X-Worker-Token","X-Operations-Token"])
+app.add_middleware(CORSMiddleware,allow_origins=ALLOWED_ORIGINS,allow_credentials=False,allow_methods=["GET","POST"],allow_headers=["Content-Type","Authorization","X-Worker-Token","X-Operations-Token","X-Worker-ID","X-Job-ID"])
 
 class GenerateRequest(BaseModel):
     prompt:str=Field(min_length=5,max_length=4000)
@@ -116,7 +116,7 @@ def require_operations_token(token):
 
 @app.middleware("http")
 async def safety_headers(request:Request,call_next):
-    if request.method in {"POST","PUT","PATCH"} and request.headers.get("content-length"):
+    if request.url.path != "/api/worker/artifacts" and request.method in {"POST","PUT","PATCH"} and request.headers.get("content-length"):
         try:
             if int(request.headers["content-length"])>MAX_BODY_BYTES:
                 return JSONResponse(413,content={"detail":{"code":"REQUEST_TOO_LARGE","message":"Request body exceeds configured limit."}})
@@ -133,7 +133,7 @@ def health():
 @app.get("/api/system/ready")
 def system_ready():
     connected=worker_fresh()
-    return {"api":"ready","worker":"connected" if connected else "offline","engine":"preflight_agent_connected" if connected else "not_configured","generation_enabled":False,"generation_reason":"No verified model adapter, user authentication or private render storage is configured.","checks":{"worker_token_configured":bool(WORKER_TOKEN),"worker_heartbeat_fresh":connected,"worker_diagnostics_received":bool(_worker.get("diagnostics")) if connected else False,"model_adapter_verified":False,"durable_job_queue":True,"durable_queue_storage":_jobs().storage_info()["durable"],"private_result_storage":False,"user_authentication":False,"successful_render_verified":False,"persistent_worker_history":True}}
+    return {"api":"ready","worker":"connected" if connected else "offline","engine":"preflight_agent_connected" if connected else "not_configured","generation_enabled":False,"generation_reason":"No verified model adapter, creator authentication or successful end-to-end render is configured.","checks":{"worker_token_configured":bool(WORKER_TOKEN),"worker_heartbeat_fresh":connected,"worker_diagnostics_received":bool(_worker.get("diagnostics")) if connected else False,"model_adapter_verified":False,"durable_job_queue":True,"durable_queue_storage":_jobs().storage_info()["durable"],"private_result_storage":True,"private_result_storage_durable":_artifacts().storage_info()["durability_verified"],"user_authentication":False,"successful_render_verified":False,"persistent_worker_history":True}}
 
 @app.get("/api/capabilities")
 def capabilities():
@@ -141,7 +141,7 @@ def capabilities():
     return {
         "api_version":APP_VERSION,
         "generation_enabled":False,
-        "reason":"No verified inference adapter, user authentication or private result storage is configured.",
+        "reason":"No verified inference adapter, creator authentication or successful end-to-end render is configured.",
         "worker":{
             "connected":fresh,
             "worker_connected":fresh,
@@ -149,7 +149,7 @@ def capabilities():
             "capabilities":["creative-planning","project-export"]
         },
         "supported_request_modes":["text","image"],
-        "planned_features":["verified_model_adapters","durable_generation_jobs","reference_image_conditioning","private_result_storage","authenticated_project_sync"]
+        "planned_features":["verified_model_adapters","durable_generation_jobs","reference_image_conditioning","durable_private_artifact_storage","authenticated_project_sync"]
     }
 
 @app.get("/api/models")
@@ -276,11 +276,125 @@ def operations_control_room(x_operations_token:str|None=Header(default=None)):
             "ephemeral": ephemeral,
             "description": "Worker-history SQLite file. Temporary container filesystem; records may be lost on restart or redeploy." if ephemeral else "Worker-history SQLite file; persistence depends on the hosting volume policy.",
         },
-        "queue_storage": _jobs().storage_info(),
+        "queue_storage": _jobs().storage_info(),\n        "artifacts": _artifacts().snapshot(limit=20),\n        "artifact_storage": _artifacts().storage_info(),
         "generation_enabled": False,
         "provider_calls_enabled": False,
         "creative_payloads_included": False,
     }
+
+
+
+def _artifacts():
+    return ArtifactStore(ARTIFACT_DB, ARTIFACT_DIR)
+
+
+def _probe_mp4(path: str) -> dict[str, Any]:
+    executable = shutil.which("ffprobe")
+    if not executable:
+        raise HTTPException(503, detail={"code":"MEDIA_VALIDATOR_UNAVAILABLE","message":"ffprobe is not installed on the backend; the upload was not accepted."})
+    try:
+        result = subprocess.run(
+            [executable, "-v", "error", "-select_streams", "v:0",
+             "-show_entries", "stream=codec_name,width,height",
+             "-show_entries", "format=duration,format_name",
+             "-of", "json", path],
+            check=True, capture_output=True, text=True, timeout=20,
+        )
+        data = json.loads(result.stdout)
+        streams = data.get("streams") or []
+        fmt = data.get("format") or {}
+        names = str(fmt.get("format_name") or "").split(",")
+        if not streams or not any("mp4" in name for name in names):
+            raise ValueError("No MP4 video stream was found.")
+        stream = streams[0]
+        width, height = int(stream.get("width") or 0), int(stream.get("height") or 0)
+        duration = float(fmt.get("duration") or 0)
+        if not (1 <= width <= 16384 and 1 <= height <= 16384 and math.isfinite(duration) and 0 < duration <= 7200):
+            raise ValueError("Video dimensions or duration are outside accepted limits.")
+        return {"width":width,"height":height,"duration_seconds":round(duration,3),"video_codec":str(stream.get("codec_name") or "unknown")}
+    except HTTPException:
+        raise
+    except (OSError, subprocess.SubprocessError, ValueError, TypeError, KeyError, json.JSONDecodeError) as exc:
+        raise HTTPException(422, detail={"code":"INVALID_MP4","message":"The uploaded file did not pass MP4 stream validation."}) from exc
+
+
+@app.post("/api/worker/artifacts", status_code=201)
+async def upload_private_artifact(
+    request: Request,
+    x_worker_token: str | None = Header(default=None),
+    x_worker_id: str = Header(min_length=3, max_length=80, pattern="^[a-zA-Z0-9._-]+$"),
+    x_job_id: str | None = Header(default=None),
+):
+    """Stream a validated MP4 from an authenticated worker into private storage."""
+    require_worker_token(x_worker_token)
+    if request.headers.get("content-type", "").split(";")[0].strip().lower() != "video/mp4":
+        raise HTTPException(415, detail={"code":"UNSUPPORTED_ARTIFACT_TYPE","message":"Only video/mp4 uploads are accepted."})
+    declared = request.headers.get("content-length")
+    if declared:
+        try:
+            if int(declared) > MAX_ARTIFACT_BYTES:
+                raise HTTPException(413, detail={"code":"ARTIFACT_TOO_LARGE","message":"Artifact exceeds the configured upload limit."})
+        except ValueError:
+            raise HTTPException(400, detail={"code":"INVALID_CONTENT_LENGTH","message":"Content-Length is invalid."})
+    if x_job_id:
+        try:
+            _jobs().get(x_job_id)
+        except JobNotFound:
+            raise HTTPException(404, detail={"code":"JOB_NOT_FOUND","message":"The referenced queue job does not exist."})
+    os.makedirs(ARTIFACT_DIR, exist_ok=True)
+    fd, temporary_path = tempfile.mkstemp(prefix=".rf983-upload-", suffix=".mp4.part", dir=ARTIFACT_DIR)
+    digest = hashlib.sha256()
+    size = 0
+    try:
+        with os.fdopen(fd, "wb") as output:
+            async for chunk in request.stream():
+                if not chunk:
+                    continue
+                size += len(chunk)
+                if size > MAX_ARTIFACT_BYTES:
+                    raise HTTPException(413, detail={"code":"ARTIFACT_TOO_LARGE","message":"Artifact exceeds the configured upload limit."})
+                digest.update(chunk)
+                output.write(chunk)
+        if size == 0:
+            raise HTTPException(400, detail={"code":"EMPTY_ARTIFACT","message":"The uploaded artifact is empty."})
+        probe = _probe_mp4(temporary_path)
+        item = _artifacts().register(temporary_path, {
+            **probe, "worker_id":x_worker_id, "job_id":x_job_id,
+            "size_bytes":size, "sha256":digest.hexdigest(), "created_at":time.time(),
+        })
+        return {"accepted":True,"artifact":item,"generation_enabled":False,"public_url":None}
+    finally:
+        if os.path.exists(temporary_path):
+            os.unlink(temporary_path)
+
+
+@app.get("/api/operations/artifacts")
+def list_private_artifacts(limit: int = 25, x_operations_token: str | None = Header(default=None)):
+    require_operations_token(x_operations_token)
+    if limit < 1 or limit > 100:
+        raise HTTPException(422, detail={"code":"INVALID_ARTIFACT_LIMIT","message":"Limit must be between 1 and 100."})
+    snapshot = _artifacts().snapshot(limit)
+    return {"items":snapshot["items"],"count":snapshot["count"],"total_bytes":snapshot["total_bytes"],"storage":_artifacts().storage_info(),"generation_enabled":False}
+
+
+@app.get("/api/operations/artifacts/{artifact_id}")
+def get_private_artifact(artifact_id: str, x_operations_token: str | None = Header(default=None)):
+    require_operations_token(x_operations_token)
+    try:
+        return {"artifact":_artifacts().get(artifact_id),"storage":_artifacts().storage_info(),"generation_enabled":False}
+    except ArtifactNotFound:
+        raise HTTPException(404, detail={"code":"ARTIFACT_NOT_FOUND","message":"Private artifact was not found."})
+
+
+@app.get("/api/operations/artifacts/{artifact_id}/download")
+def download_private_artifact(artifact_id: str, x_operations_token: str | None = Header(default=None)):
+    require_operations_token(x_operations_token)
+    try:
+        item = _artifacts().get(artifact_id)
+        path = _artifacts().file_path(artifact_id)
+    except ArtifactNotFound:
+        raise HTTPException(404, detail={"code":"ARTIFACT_NOT_FOUND","message":"Private artifact was not found."})
+    return FileResponse(path, media_type="video/mp4", filename="rf983-"+artifact_id[:8]+".mp4", headers={"Cache-Control":"no-store","X-Artifact-SHA256":item["sha256"]})
 
 
 def _queue_database():

@@ -10,7 +10,7 @@ def test_health_reports_inference_offline():
     response = client.get("/api/health")
     assert response.status_code == 200
     assert response.json()["inference"] == "offline"
-    assert response.json()["version"] == "1.8.0"
+    assert response.json()["version"] == "1.9.0"
 
 def test_capabilities_do_not_claim_generation():
     response = client.get("/api/capabilities")
@@ -112,7 +112,7 @@ def test_operations_summary_keeps_generation_disabled(monkeypatch,tmp_path):
     monkeypatch.setattr("app.main.STATE_DB",str(tmp_path/"ops.sqlite3"))
     monkeypatch.setattr("app.main.OPERATIONS_TOKEN","ops-secret")
     data=client.get("/api/operations/summary",headers={"X-Operations-Token":"ops-secret"}).json()
-    assert data["api_version"]=="1.8.0" and data["persistent_state"]=="sqlite"
+    assert data["api_version"]=="1.9.0" and data["persistent_state"]=="sqlite"
     assert data["generation_enabled"] is False
 
 
@@ -254,3 +254,74 @@ def test_queue_database_can_be_configured_separately_from_worker_history(monkeyp
     item = _jobs().enqueue({"prompt": "A cinematic test"})
     assert _jobs().get(item["id"])["status"] == "queued"
     assert _jobs().storage_info()["kind"] == "sqlite"
+
+
+def test_private_artifact_upload_and_authenticated_retrieval(monkeypatch,tmp_path):
+    import app.main as api
+    monkeypatch.setattr(api,"WORKER_TOKEN","worker-artifact-secret")
+    monkeypatch.setattr(api,"OPERATIONS_TOKEN","ops-artifact-secret")
+    monkeypatch.setattr(api,"ARTIFACT_DB",str(tmp_path/"artifacts.sqlite3"))
+    monkeypatch.setattr(api,"ARTIFACT_DIR",str(tmp_path/"private-artifacts"))
+    monkeypatch.setattr(api,"_probe_mp4",lambda path:{"width":1280,"height":720,"duration_seconds":4.5,"video_codec":"h264"})
+    response=client.post("/api/worker/artifacts",content=b"test-mp4-bytes",headers={"Content-Type":"video/mp4","X-Worker-Token":"worker-artifact-secret","X-Worker-ID":"gpu-worker-01"})
+    assert response.status_code==201
+    item=response.json()["artifact"]
+    assert item["size_bytes"]==len(b"test-mp4-bytes")
+    assert item["width"]==1280 and item["video_codec"]=="h264"
+    assert response.json()["public_url"] is None
+    headers={"X-Operations-Token":"ops-artifact-secret"}
+    listed=client.get("/api/operations/artifacts",headers=headers)
+    assert listed.status_code==200 and listed.json()["count"]==1
+    downloaded=client.get(f"/api/operations/artifacts/{item['id']}/download",headers=headers)
+    assert downloaded.status_code==200 and downloaded.content==b"test-mp4-bytes"
+    assert downloaded.headers["cache-control"]=="no-store"
+
+
+def test_artifact_routes_require_their_private_tokens(monkeypatch,tmp_path):
+    import app.main as api
+    monkeypatch.setattr(api,"WORKER_TOKEN","worker-secret")
+    monkeypatch.setattr(api,"OPERATIONS_TOKEN","ops-secret")
+    monkeypatch.setattr(api,"ARTIFACT_DB",str(tmp_path/"artifacts.sqlite3"))
+    monkeypatch.setattr(api,"ARTIFACT_DIR",str(tmp_path/"private-artifacts"))
+    upload=client.post("/api/worker/artifacts",content=b"data",headers={"Content-Type":"video/mp4","X-Worker-ID":"worker-01"})
+    assert upload.status_code==401
+    listing=client.get("/api/operations/artifacts")
+    assert listing.status_code==401
+
+
+def test_artifact_upload_rejects_non_mp4_and_unknown_job(monkeypatch,tmp_path):
+    import app.main as api
+    monkeypatch.setattr(api,"WORKER_TOKEN","worker-secret")
+    monkeypatch.setattr(api,"ARTIFACT_DB",str(tmp_path/"artifacts.sqlite3"))
+    monkeypatch.setattr(api,"ARTIFACT_DIR",str(tmp_path/"private-artifacts"))
+    headers={"X-Worker-Token":"worker-secret","X-Worker-ID":"worker-01","Content-Type":"application/octet-stream"}
+    wrong_type=client.post("/api/worker/artifacts",content=b"nope",headers=headers)
+    assert wrong_type.status_code==415
+    headers["Content-Type"]="video/mp4"
+    headers["X-Job-ID"]="missing-job"
+    missing_job=client.post("/api/worker/artifacts",content=b"fake",headers=headers)
+    assert missing_job.status_code==404
+
+
+def test_control_room_reports_private_artifact_storage(monkeypatch,tmp_path):
+    import app.main as api
+    monkeypatch.setattr(api,"OPERATIONS_TOKEN","ops-secret")
+    monkeypatch.setattr(api,"ARTIFACT_DB",str(tmp_path/"artifacts.sqlite3"))
+    monkeypatch.setattr(api,"ARTIFACT_DIR",str(tmp_path/"artifacts"))
+    data=client.get("/api/operations/control-room",headers={"X-Operations-Token":"ops-secret"}).json()
+    assert data["artifact_storage"]["kind"]=="private-local-filesystem"
+    assert data["artifacts"]["count"]==0
+    assert data["generation_enabled"] is False
+
+
+def test_mp4_probe_rejects_unverified_video(monkeypatch):
+    import app.main as api
+    monkeypatch.setattr(api.shutil,"which",lambda name:"/usr/bin/ffprobe")
+    class Failed:
+        stdout='{"streams":[],"format":{"format_name":"wav","duration":"2"}}'
+    monkeypatch.setattr(api.subprocess,"run",lambda *args,**kwargs:Failed())
+    from fastapi import HTTPException
+    import pytest
+    with pytest.raises(HTTPException) as error:
+        api._probe_mp4("/tmp/not-a-video.mp4")
+    assert error.value.status_code==422

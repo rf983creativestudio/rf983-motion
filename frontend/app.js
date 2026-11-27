@@ -74,6 +74,11 @@ async function refreshControlRoom(){
   stats.innerHTML='<div><b>'+(data.worker?.connected?"ONLINE":"OFFLINE")+'</b><small>GPU WORKER</small></div><div><b>'+Number(counts.queued||0)+'</b><small>QUEUED</small></div><div><b>'+Number(counts.running||0)+'</b><small>RUNNING</small></div><div><b>'+Number(counts.succeeded||0)+'</b><small>SUCCEEDED</small></div><div><b>'+Number(counts.failed||0)+'</b><small>FAILED</small></div>';
   const queueStore=data.queue_storage||data.storage||{};
   storage.textContent=queueStore.kind==="postgresql"?"POSTGRESQL QUEUE · EXTERNAL":queueStore.ephemeral?"EPHEMERAL SQLITE QUEUE":"VOLUME-DEPENDENT SQLITE QUEUE";
+  const artifactData=data.artifacts||{},artifactItems=Array.isArray(artifactData.items)?artifactData.items:[];
+  const artifactStorage=data.artifact_storage||{};
+  const artifactHost=$("#control-room-artifacts"),artifactBadge=$("#artifact-storage");
+  if(artifactBadge)artifactBadge.textContent=artifactStorage.ephemeral?"PRIVATE STORAGE · EPHEMERAL":artifactStorage.durability_verified?"PRIVATE STORAGE · VERIFIED":"PRIVATE STORAGE · DURABILITY UNVERIFIED";
+  if(artifactHost)artifactHost.innerHTML=artifactItems.length?artifactItems.map(item=>'<article class="artifact-row"><div><b>'+escapeHtml(item.id.slice(0,12))+'</b><small>'+escapeHtml((Number(item.width)||0)+' × '+(Number(item.height)||0)+' · '+Number(item.duration_seconds||0).toFixed(1)+'s · '+(Number(item.size_bytes||0)/1048576).toFixed(1)+' MB')+'</small><small>'+escapeHtml(item.video_codec||"unknown codec")+' · '+escapeHtml(new Date(Number(item.created_at)*1000).toLocaleString())+'</small></div><button class="small-outline" type="button" data-download-artifact="'+escapeHtml(item.id)+'">Download privately</button></article>').join(""):'<div class="engine-registry-empty">No validated render artifacts are stored yet.</div>';
   const jobs=Array.isArray(q.items)?q.items:[];
   host.innerHTML=jobs.length?jobs.map(job=>{
    const canCancel=["queued","running"].includes(job.status);
@@ -99,7 +104,20 @@ async function cancelControlRoomJob(jobId){
  }catch(error){toast("Could not cancel job: "+error.message)}
 }
 
-async function refreshEngineRegistry(){
+
+async function downloadPrivateArtifact(artifactId){
+ const base=$("#api-base")?.value.trim(),token=$("#operations-token")?.value.trim();
+ if(!base||!token)return;
+ let origin;try{origin=new URL(base).origin}catch(error){toast("Backend URL is invalid.");return}
+ try{
+  const response=await fetch(origin+"/api/operations/artifacts/"+encodeURIComponent(artifactId)+"/download",{headers:{Accept:"video/mp4","X-Operations-Token":token},cache:"no-store"});
+  if(!response.ok)throw new Error("Private download failed with HTTP "+response.status);
+  const blob=await response.blob(),url=URL.createObjectURL(blob),anchor=document.createElement("a");
+  anchor.href=url;anchor.download="rf983-"+artifactId.slice(0,8)+".mp4";document.body.appendChild(anchor);anchor.click();anchor.remove();URL.revokeObjectURL(url);
+  toast("Private artifact download started.");
+ }catch(error){toast(error.message)}
+}
+\nasync function refreshEngineRegistry(){
  const host=$("#engine-registry-grid"),summary=$("#engine-summary"),note=$("#engine-registry-note"),button=$("#refresh-engines");
  if(!host)return;
  const base=$("#api-base")?.value.trim();
@@ -294,7 +312,7 @@ $$("[data-go]").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.go))
 $("#refresh-diagnostics").addEventListener("click",refreshDiagnostics);
 $("#refresh-engines").addEventListener("click",refreshEngineRegistry);
 $("#refresh-control-room").addEventListener("click",refreshControlRoom);
-$("#control-room-jobs").addEventListener("click",e=>{const button=e.target.closest("[data-cancel-job]");if(button)cancelControlRoomJob(button.dataset.cancelJob)});
+$("#control-room-jobs").addEventListener("click",e=>{const button=e.target.closest("[data-cancel-job]");if(button)cancelControlRoomJob(button.dataset.cancelJob)});\n$("#control-room-artifacts").addEventListener("click",e=>{const button=e.target.closest("[data-download-artifact]");if(button)downloadPrivateArtifact(button.dataset.downloadArtifact)});
 $("#refresh-history").addEventListener("click",refreshDiagnostics);
 $("#run-production-check").addEventListener("click",()=>{renderProductionDesk();toast("Pre-production checks refreshed.")});
 $("#export-director-brief").addEventListener("click",exportDirectorBrief);
