@@ -94,23 +94,31 @@
 <section class="view" id="view-models">
   <div class="page-heading"><div><div class="eyebrow">INFERENCE RESEARCH / 04</div><h1>The <i>model lab.</i></h1><p>Evaluate model families before committing to hardware, weights or a deployment path.</p></div><span class="offline-pill"><i></i> NO GPU WORKER CONNECTED</span></div>
   <div class="panel engine-control-panel" id="cloud-engine-centre">
-    <div class="engine-control-head"><div><div class="eyebrow">CLOUD INFERENCE / ENGINE GATEWAY 1.4.0</div><h2>Cloud engine <i>control centre.</i></h2><p class="helper">Inspect connection routes and their data, billing and verification requirements. This registry does not connect to providers or send prompts.</p></div><button class="small-outline" id="refresh-engines" type="button">Refresh registry ↻</button></div>
+    <div class="engine-control-head"><div><div class="eyebrow">CLOUD INFERENCE / ENGINE GATEWAY 1.6.0</div><h2>Cloud engine <i>control centre.</i></h2><p class="helper">Inspect connection routes and their data, billing and verification requirements. This registry does not connect to providers or send prompts.</p></div><button class="small-outline" id="refresh-engines" type="button">Refresh registry ↻</button></div>
     <div class="engine-summary" id="engine-summary"><span><b>—</b><small>REGISTERED</small></span><span><b>—</b><small>CONFIGURED</small></span><span><b>—</b><small>VERIFIED</small></span><span><b>OFF</b><small>GENERATION</small></span></div>
     <div class="engine-registry-grid" id="engine-registry-grid" aria-live="polite"><div class="engine-registry-empty">Connect the backend and refresh to load the engine registry.</div></div>
     <div class="engine-privacy-note"><b>Privacy and billing gate</b><span>Provider integrations may transmit prompts and reference assets and may incur charges. RF983 MOTION will not enable a provider, accept credentials or send creative data until you explicitly choose and configure an engine.</span></div>
     <small class="helper" id="engine-registry-note">Registry status is metadata only. An engine listed here is not installed, configured or verified.</small>
   </div>
+
+  <div class="panel engine-evaluation-panel" id="engine-evaluation">
+    <div class="eyebrow">DECISION INTELLIGENCE / BUILD 1.6.0</div>
+    <div class="engine-evaluation-head"><div><h2>Engine evaluation <i>&amp; selection.</i></h2><p class="helper">A conservative architecture assessment for our current launch constraints. It does not benchmark providers, check live prices or contact engines.</p></div><span class="engine-hold-pill">NO ENGINE APPROVED</span></div>
+    <div class="engine-decision" id="engine-decision" aria-live="polite"><b>Hold — do not activate a cloud engine yet.</b><p>Loading the evaluation from the RF983 backend…</p></div>
+    <div class="engine-evaluation-grid" id="engine-evaluation-grid"><div class="engine-registry-empty">Waiting for the backend evaluation.</div></div>
+    <div class="engine-evaluation-foot"><b>Selection rule</b><span>We will only move to provider setup after an explicit budget limit, data-transfer approval, model choice and successful adapter verification. No secret or creative prompt is collected here.</span></div>
+  </div>
   <div class="panel architecture-panel launch-panel">
     <div class="eyebrow">PUBLIC LAUNCH / DEPLOYMENT PACKAGE</div>
     <h2>One service. One secure entry point.</h2>
-    <p class="helper">The repository now includes a single-container deployment image and Render Blueprint. The hosting service has not been provisioned yet; this package makes the setup repeatable.</p>
+    <p class="helper">The repository now includes a single-container deployment image and Render Blueprint. The Render API is deployed and connected to the GitHub Pages studio. Free-tier sleep and ephemeral local storage remain operational limitations.</p>
     <div class="worker-steps">
       <div><span>01</span><b>Connect GitHub</b><small>Choose the private RF983 MOTION repository in Render Blueprint.</small></div>
       <div><span>02</span><b>Apply Blueprint</b><small>Render builds the frontend and API together from the root Dockerfile.</small></div>
       <div><span>03</span><b>Verify health</b><small>Wait for the /api/health check, then open the generated HTTPS URL.</small></div>
       <div><span>04</span><b>Protect operations</b><small>Copy the generated operations secret into this page only when diagnostics are needed.</small></div>
     </div>
-    <div class="worker-safety-note"><b>Launch status</b><span>Deployment configuration is committed. A live public URL, persistent hosted history and real AI inference are not yet configured.</span></div>
+    <div class="worker-safety-note"><b>Launch status</b><span>Backend health and the private operations foundation are deployed. Durable production storage, authenticated user projects and verified AI inference are still not configured.</span></div>
     <a href="https://github.com/rf983creativestudio/rf983-motion/blob/main/docs/DEPLOYMENT_0.9.0.md" target="_blank" rel="noopener">Open deployment guide ↗</a>
   </div>
   <div class="panel architecture-panel">
@@ -131,7 +139,7 @@
     <article class="model-feature panel"><div class="model-feature-top"><span class="model-logo">W</span><span class="research-tag">CANDIDATE A</span></div><h2>Wan 2.2 · TI2V 5B</h2><p>Text-and-image-to-video path with a 720p / 24 fps target. A practical first candidate to evaluate for a self-hosted prototype, subject to GPU memory and runtime testing.</p><div class="model-facts"><div><small>INPUT</small><b>Text + image</b></div><div><small>OUTPUT TARGET</small><b>720p · 24 fps</b></div><div><small>STATUS</small><b>Not installed</b></div></div><a href="https://github.com/Wan-Video/Wan2.2" target="_blank" rel="noopener">Official repository ↗</a></article>
     <article class="model-feature panel"><div class="model-feature-top"><span class="model-logo">L</span><span class="research-tag">CANDIDATE B</span></div><h2>LTX-2.5</h2><p>Audio-video foundation model with multi-stage pipelines. High potential for advanced workflows, but model files and VRAM requirements are substantial.</p><div class="model-facts"><div><small>INPUT</small><b>Text / image / audio</b></div><div><small>PIPELINES</small><b>Distilled / DFR</b></div><div><small>STATUS</small><b>Not installed</b></div></div><a href="https://github.com/Lightricks/LTX-2" target="_blank" rel="noopener">Official repository ↗</a></article>
   </div>
-  <div class="panel architecture-panel"><div class="eyebrow">SYSTEM STATUS</div><h2>What is connected today?</h2><div class="architecture-list"><div><span class="arch-dot ready"></span><b>Studio frontend</b><small>Available locally / static hosting</small><em>READY</em></div><div><span class="arch-dot ready"></span><b>Project drafts</b><small>Browser local storage only</small><em>READY</em></div><div><span class="arch-dot pending"></span><b>FastAPI service</b><small>Health and capability contract</small><em>FOUNDATION</em></div><div><span class="arch-dot offline"></span><b>GPU inference worker</b><small>No model weights or compute connected</small><em>OFFLINE</em></div><div><span class="arch-dot offline"></span><b>Render storage / job queue</b><small>Requires backend infrastructure</small><em>NOT BUILT</em></div></div></div>
+  <div class="panel architecture-panel"><div class="eyebrow">SYSTEM STATUS</div><h2>What is connected today?</h2><div class="architecture-list"><div><span class="arch-dot ready"></span><b>Studio frontend</b><small>Available locally / static hosting</small><em>READY</em></div><div><span class="arch-dot ready"></span><b>Project drafts</b><small>Browser local storage only</small><em>READY</em></div><div><span class="arch-dot pending"></span><b>FastAPI service</b><small>Health and capability contract</small><em>FOUNDATION</em></div><div><span class="arch-dot offline"></span><b>GPU inference worker</b><small>No model weights or compute connected</small><em>OFFLINE</em></div><div><span class="arch-dot offline"></span><b>Private job queue</b><small>Backend queue exists; hosted SQLite is ephemeral</small><em>FOUNDATION</em></div></div></div>
   <div class="panel worker-setup-panel">
     <div class="eyebrow">LOCAL COMPUTE BRIDGE / PROTOCOL 0.7</div>
     <h2>Bring your computer into the studio.</h2>
