@@ -60,3 +60,10 @@ A dropdown selection or worker heartbeat never makes a model production-ready.
 7. Worker isolation, resource limits and safe upload handling.
 
 Until every required gate is met, `/api/generate` must remain fail-closed.
+
+
+## Build 1.1.0: durable queue primitive
+
+The backend now includes a SQLite lease-based queue module. It provides atomic claims, worker ownership, lease renewal, bounded retries, expiry recovery, cancellation and terminal-state validation. Its payload/result records are bounded JSON metadata only.
+
+This module is intentionally not wired to public generation routes or the local Wan CLI yet. It is not a distributed scheduler and does not enable generation. The next stage must add authenticated worker/API integration, cancellation signalling, idempotency, verified artifact registration and private result delivery before the API can accept real render jobs.
