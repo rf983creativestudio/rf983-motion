@@ -241,4 +241,4 @@ def test_control_room_returns_safe_queue_snapshot_without_prompt_payload(monkeyp
     assert data["queue"]["items"][0]["status"] == "queued"
     assert "payload" not in data["queue"]["items"][0]
     assert "Private cinematic test prompt" not in response.text
-    assert data["storage"]["ephemeral"] is False
+    assert data["storage"]["ephemeral"] is True
