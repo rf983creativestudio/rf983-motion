@@ -10,7 +10,7 @@ def test_health_reports_inference_offline():
     response = client.get("/api/health")
     assert response.status_code == 200
     assert response.json()["inference"] == "offline"
-    assert response.json()["version"] == "1.4.0"
+    assert response.json()["version"] == "1.6.0"
 
 def test_capabilities_do_not_claim_generation():
     response = client.get("/api/capabilities")
@@ -200,3 +200,15 @@ def test_private_engine_status_requires_operations_token(monkeypatch):
     response = client.get("/api/operations/engine-status", headers={"X-Operations-Token":"ops-secret"})
     assert response.status_code == 200
     assert response.json()["generation_enabled"] is False
+
+
+def test_engine_evaluation_is_conservative_and_never_enables_generation():
+    response = client.get("/api/engine-evaluation")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["recommendation"]["decision"] == "hold"
+    assert data["provider_calls_enabled"] is False
+    assert data["generation_enabled"] is False
+    assert data["benchmark_verified"] is False
+    assert data["live_pricing_checked"] is False
+    assert {item["id"] for item in data["engines"]} == {"replicate", "fal", "runpod", "custom-https"}
