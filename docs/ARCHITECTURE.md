@@ -67,3 +67,8 @@ Until every required gate is met, `/api/generate` must remain fail-closed.
 The backend now includes a SQLite lease-based queue module. It provides atomic claims, worker ownership, lease renewal, bounded retries, expiry recovery, cancellation and terminal-state validation. Its payload/result records are bounded JSON metadata only.
 
 This module is intentionally not wired to public generation routes or the local Wan CLI yet. It is not a distributed scheduler and does not enable generation. The next stage must add authenticated worker/API integration, cancellation signalling, idempotency, verified artifact registration and private result delivery before the API can accept real render jobs.
+
+
+## Build 1.2.0: protected queue operations API
+
+Private operations-token-protected endpoints now expose queue enqueue, list, detail and cancellation. The enqueue request reuses the validated generation schema and stores bounded metadata in the existing SQLite queue. Queue responses explicitly report generation_enabled=false. The public generation endpoint remains HTTP 503. No worker claim/completion route, model execution, public result URL or user-facing job history is enabled in this build.
