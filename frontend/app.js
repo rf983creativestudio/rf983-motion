@@ -18,7 +18,7 @@ function escapeHtml(value){return String(value??"").replace(/[&<>"']/g,c=>({"&":
 function getShots(){return state.shots}
 function totalDuration(){return state.shots.reduce((sum,shot)=>sum+Number(shot.duration||0),0)}
 function toast(message){const el=$("#toast");el.textContent=message;el.classList.add("show");clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove("show"),2300)}
-function setView(name){state.activeView=name;$$(".view").forEach(v=>v.classList.toggle("active",v.id==="view-"+name));$$(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.view===name));$("#crumb-current").textContent=({studio:"Studio",storyboard:"Storyboard",library:"My projects",models:"Model lab"})[name]||"Studio";if(name==="storyboard")renderShotEditor();if(name==="library")renderLibrary();if(name==="models")refreshEngineRegistry();window.scrollTo({top:0,behavior:"smooth"})}
+function setView(name){state.activeView=name;$$(".view").forEach(v=>v.classList.toggle("active",v.id==="view-"+name));$$(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.view===name));$("#crumb-current").textContent=({studio:"Studio",storyboard:"Storyboard",library:"My projects",models:"Model lab"})[name]||"Studio";if(name==="storyboard")renderShotEditor();if(name==="library")renderLibrary();if(name==="models"){refreshEngineRegistry();refreshControlRoom();}window.scrollTo({top:0,behavior:"smooth"})}
 function readForm(){return {name:$("#project-name").value.trim()||"Untitled cinematic project",prompt:$("#prompt").value,negativePrompt:$("#negative-prompt").value,subject:$("#subject").value,environment:$("#environment").value,lighting:$("#lighting").value,mood:$("#mood").value,model:$("#model").value,aspect:$("#aspect").value,resolution:$("#resolution").value,duration:$("#duration").value,fps:$("#fps").value,quality:$("#quality").value,seed:$("#seed").value,audio:$("#audio").checked,refine:$("#refine").checked,shots:state.shots.map(s=>({...s})),reference:state.reference?{name:state.reference.name,type:state.reference.type,size:state.reference.size}:null,updatedAt:new Date().toISOString()}}
 function applyForm(data){if(!data)return;const fields=["project-name","prompt","negative-prompt","subject","environment","lighting","mood","model","aspect","resolution","duration","fps","quality","seed"];const keys=["name","prompt","negativePrompt","subject","environment","lighting","mood","model","aspect","resolution","duration","fps","quality","seed"];fields.forEach((id,i)=>{if(data[keys[i]]!==undefined)$("#"+id).value=data[keys[i]]});if(data.audio!==undefined)$("#audio").checked=!!data.audio;if(data.refine!==undefined)$("#refine").checked=!!data.refine;if(Array.isArray(data.shots)&&data.shots.length)state.shots=data.shots.map(s=>({...s}));renderAll()}
 function saveDraft(silent=false){const data=readForm();try{localStorage.setItem(DRAFT_KEY,JSON.stringify(data));$("#save-state").textContent="SAVED LOCALLY · "+new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});if(!silent)toast("Draft saved in this browser.");return true}catch(e){if(!silent)toast("Could not save locally. Browser storage may be full.");return false}}
@@ -57,6 +57,46 @@ function renderWorkerHistory(items){
   return '<article class="history-item"><div class="history-time"><b>'+escapeHtml(stamp)+'</b><small>'+escapeHtml(item.worker_id||"local worker")+'</small></div><div class="history-facts"><span>'+escapeHtml(gpu)+'</span><span>FFmpeg '+(tools.ffmpeg?"available":"missing")+'</span><span>Python '+escapeHtml(d.python||"unknown")+'</span><span>Disk '+escapeHtml(String(d.disk_free_gb??"—"))+' GB free</span></div></article>';
  }).join("");
 }
+
+async function refreshControlRoom(){
+ const host=$("#control-room-jobs"),stats=$("#control-room-stats"),status=$("#control-room-status"),storage=$("#control-room-storage"),button=$("#refresh-control-room");
+ if(!host)return;
+ const base=$("#api-base")?.value.trim(),token=$("#operations-token")?.value.trim();
+ if(!base||!token){status.textContent="Enter the backend URL and private operations token in System Control Centre. The token is used only for this request and is never saved.";return}
+ let origin;
+ try{const parsed=new URL(base);if(parsed.protocol!=="https:"||parsed.username||parsed.password||parsed.pathname!=="/"||parsed.search||parsed.hash)throw new Error();origin=parsed.origin}catch(error){status.textContent="Use the HTTPS backend origin only. No private request was sent.";return}
+ if(button){button.disabled=true;button.textContent="Refreshing…"}
+ status.textContent="Loading authenticated operational snapshot…";
+ try{
+  const response=await fetch(origin+"/api/operations/control-room",{headers:{Accept:"application/json","X-Operations-Token":token},cache:"no-store"});
+  if(!response.ok){if(response.status===401)throw new Error("Operations token was rejected. Check the token in System Control Centre.");if(response.status===503)throw new Error("Private operations authentication is not configured on the backend.");throw new Error("Control room returned HTTP "+response.status)}
+  const data=await response.json(),q=data.queue||{},counts=q.counts||{};
+  stats.innerHTML='<div><b>'+(data.worker?.connected?"ONLINE":"OFFLINE")+'</b><small>GPU WORKER</small></div><div><b>'+Number(counts.queued||0)+'</b><small>QUEUED</small></div><div><b>'+Number(counts.running||0)+'</b><small>RUNNING</small></div><div><b>'+Number(counts.succeeded||0)+'</b><small>SUCCEEDED</small></div><div><b>'+Number(counts.failed||0)+'</b><small>FAILED</small></div>';
+  storage.textContent=data.storage?.ephemeral?"EPHEMERAL SQLITE":"VOLUME-DEPENDENT SQLITE";
+  const jobs=Array.isArray(q.items)?q.items:[];
+  host.innerHTML=jobs.length?jobs.map(job=>{
+   const canCancel=["queued","running"].includes(job.status);
+   const date=new Date(Number(job.created_at)*1000);
+   const stamp=Number.isNaN(date.getTime())?"Unknown":date.toLocaleString();
+   return '<article class="control-room-job"><div class="control-room-job-main"><b>'+escapeHtml(job.id)+'</b><small>'+escapeHtml(stamp)+' · attempt '+Number(job.attempts||0)+'/'+Number(job.max_attempts||0)+'</small></div><span class="control-job-state '+escapeHtml(job.status)+'">'+escapeHtml(job.status)+'</span>'+(canCancel?'<button class="control-cancel" data-cancel-job="'+escapeHtml(job.id)+'" type="button">Cancel</button>':'')+'</article>';
+  }).join(""):'<div class="engine-registry-empty">No generation jobs are recorded in this queue yet.</div>';
+  status.textContent="Authenticated snapshot loaded · API "+escapeHtml(data.api?.version||"unknown")+" · "+Number(data.models?.verified_count||0)+" verified models · "+Number(data.engines?.verified_count||0)+" verified engines · generation "+(data.generation_enabled?"enabled":"disabled")+".";
+  if(data.storage?.ephemeral)status.textContent+=" Queue and worker-history records may be lost when the free Render container restarts or redeploys.";
+ }catch(error){host.innerHTML='<div class="engine-registry-empty">'+escapeHtml(error.message)+'</div>';status.textContent="Control room unavailable. No prompts or assets were requested."}
+ finally{if(button){button.disabled=false;button.textContent="Refresh control room ↻"}}
+}
+async function cancelControlRoomJob(jobId){
+ if(!confirm("Cancel this queued/running job? This cannot be undone."))return;
+ const base=$("#api-base")?.value.trim(),token=$("#operations-token")?.value.trim();
+ if(!base||!token)return;
+ const origin=new URL(base).origin;
+ try{
+  const response=await fetch(origin+"/api/operations/queue/jobs/"+encodeURIComponent(jobId)+"/cancel",{method:"POST",headers:{Accept:"application/json","X-Operations-Token":token},cache:"no-store"});
+  if(!response.ok){const body=await response.json().catch(()=>({}));throw new Error(body.detail?.message||"Cancel request failed with HTTP "+response.status)}
+  toast("Queue job cancelled.");await refreshControlRoom();
+ }catch(error){toast("Could not cancel job: "+error.message)}
+}
+
 async function refreshEngineRegistry(){
  const host=$("#engine-registry-grid"),summary=$("#engine-summary"),note=$("#engine-registry-note"),button=$("#refresh-engines");
  if(!host)return;
@@ -251,6 +291,8 @@ $$(".nav-item").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view
 $$("[data-go]").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.go)));
 $("#refresh-diagnostics").addEventListener("click",refreshDiagnostics);
 $("#refresh-engines").addEventListener("click",refreshEngineRegistry);
+$("#refresh-control-room").addEventListener("click",refreshControlRoom);
+$("#control-room-jobs").addEventListener("click",e=>{const button=e.target.closest("[data-cancel-job]");if(button)cancelControlRoomJob(button.dataset.cancelJob)});
 $("#refresh-history").addEventListener("click",refreshDiagnostics);
 $("#run-production-check").addEventListener("click",()=>{renderProductionDesk();toast("Pre-production checks refreshed.")});
 $("#export-director-brief").addEventListener("click",exportDirectorBrief);

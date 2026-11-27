@@ -215,3 +215,29 @@ class JobStore:
             updated = db.execute("SELECT * FROM generation_jobs WHERE id=?", (job_id,)).fetchone()
             db.commit()
         return self._row(updated)
+
+
+    def operations_snapshot(self, limit: int = 30) -> dict[str, Any]:
+        """Return queue counts and safe operational metadata, never job payloads."""
+        if not 1 <= limit <= 100:
+            raise JobStoreError("limit must be between 1 and 100.")
+        with self._connect() as db:
+            grouped = db.execute(
+                "SELECT status, COUNT(*) AS amount FROM generation_jobs GROUP BY status"
+            ).fetchall()
+            rows = db.execute(
+                """SELECT id,status,created_at,updated_at,attempts,max_attempts,
+                          worker_id,lease_expires_at,error_code,error_message
+                   FROM generation_jobs ORDER BY created_at DESC LIMIT ?""",
+                (limit,),
+            ).fetchall()
+        counts = {status: 0 for status in STATUSES}
+        for row in grouped:
+            if row["status"] in counts:
+                counts[row["status"]] = int(row["amount"])
+        return {
+            "counts": counts,
+            "total": sum(counts.values()),
+            "items": [dict(row) for row in rows],
+            "limit": limit,
+        }

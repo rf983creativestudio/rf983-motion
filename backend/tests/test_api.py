@@ -10,7 +10,7 @@ def test_health_reports_inference_offline():
     response = client.get("/api/health")
     assert response.status_code == 200
     assert response.json()["inference"] == "offline"
-    assert response.json()["version"] == "1.6.0"
+    assert response.json()["version"] == "1.7.0"
 
 def test_capabilities_do_not_claim_generation():
     response = client.get("/api/capabilities")
@@ -212,3 +212,33 @@ def test_engine_evaluation_is_conservative_and_never_enables_generation():
     assert data["benchmark_verified"] is False
     assert data["live_pricing_checked"] is False
     assert {item["id"] for item in data["engines"]} == {"replicate", "fal", "runpod", "custom-https"}
+
+
+def test_control_room_requires_private_operations_token(monkeypatch):
+    monkeypatch.setattr("app.main.OPERATIONS_TOKEN", "control-secret")
+    response = client.get("/api/operations/control-room")
+    assert response.status_code == 401
+    assert response.json()["detail"]["code"] == "OPERATIONS_AUTH_FAILED"
+
+
+def test_control_room_returns_safe_queue_snapshot_without_prompt_payload(monkeypatch, tmp_path):
+    monkeypatch.setattr("app.main.OPERATIONS_TOKEN", "control-secret")
+    monkeypatch.setattr("app.main.STATE_DB", str(tmp_path / "control.sqlite3"))
+    headers = {"X-Operations-Token": "control-secret"}
+    created = client.post(
+        "/api/operations/queue/jobs",
+        headers=headers,
+        json={"prompt": "Private cinematic test prompt"},
+    )
+    assert created.status_code == 202
+    response = client.get("/api/operations/control-room", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["generation_enabled"] is False
+    assert data["provider_calls_enabled"] is False
+    assert data["creative_payloads_included"] is False
+    assert data["queue"]["counts"]["queued"] == 1
+    assert data["queue"]["items"][0]["status"] == "queued"
+    assert "payload" not in data["queue"]["items"][0]
+    assert "Private cinematic test prompt" not in response.text
+    assert data["storage"]["ephemeral"] is False

@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 
-APP_VERSION="1.6.0"
+APP_VERSION="1.7.0"
 ALLOWED_ORIGINS=[x.strip() for x in os.getenv("RF983_ALLOWED_ORIGINS","http://localhost:8000,http://127.0.0.1:8000").split(",") if x.strip()]
 WORKER_TOKEN=os.getenv("RF983_WORKER_TOKEN","")
 OPERATIONS_TOKEN=os.getenv("RF983_OPERATIONS_TOKEN","")
@@ -244,6 +244,41 @@ def operations_summary(x_operations_token:str|None=Header(default=None)):
             "worker_id":_worker["worker_id"] if fresh else None,"worker_history_records":count,
             "generation_enabled":False,"production_state":"preflight-only","persistent_state":"sqlite"}
 
+
+@app.get("/api/operations/control-room")
+def operations_control_room(x_operations_token:str|None=Header(default=None)):
+    """Authenticated operational snapshot; excludes prompts, assets and credentials."""
+    require_operations_token(x_operations_token)
+    fresh = worker_fresh()
+    queue = _jobs().operations_snapshot(limit=30)
+    engines = list_engines()
+    storage_path = os.path.abspath(STATE_DB)
+    ephemeral = storage_path == "/tmp" or storage_path.startswith("/tmp/")
+    return {
+        "api": {"version": APP_VERSION, "uptime_seconds": int(time.time() - _started)},
+        "worker": {
+            "connected": fresh,
+            "worker_id": _worker["worker_id"] if fresh else None,
+            "engine": _worker["engine"] if fresh else None,
+            "last_seen_seconds_ago": round(time.time() - _worker["last_seen"], 1) if fresh else None,
+        },
+        "models": {"candidate_count": len(MODEL_CATALOG), "verified_count": 0},
+        "engines": {
+            "registered_count": len(engines),
+            "configured_count": sum(1 for item in engines if item.get("enabled")),
+            "verified_count": sum(1 for item in engines if item.get("verified")),
+            "provider_calls_enabled": False,
+        },
+        "queue": queue,
+        "storage": {
+            "kind": "sqlite",
+            "ephemeral": ephemeral,
+            "description": "Temporary container filesystem; records may be lost on restart or redeploy." if ephemeral else "Configured filesystem path; persistence depends on the hosting volume policy.",
+        },
+        "generation_enabled": False,
+        "provider_calls_enabled": False,
+        "creative_payloads_included": False,
+    }
 
 
 def _jobs():
