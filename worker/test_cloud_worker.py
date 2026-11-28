@@ -2,7 +2,7 @@ import sys, types
 from pathlib import Path
 import pytest
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from cloud_worker import WorkerConfigError,load_config,load_adapter,CloudWorker
+from worker.cloud_worker import WorkerConfigError,load_config,load_adapter,CloudWorker
 
 def valid_env(tmp_path):
     return {"RF983_API_BASE":"https://rf983-motion.onrender.com","RF983_WORKER_TOKEN":"x"*32,
