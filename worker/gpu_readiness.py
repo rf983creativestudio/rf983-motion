@@ -43,7 +43,9 @@ def inspect_deployment(env=None, wan_repo=None, checkpoint=None):
       "storage":{"output_disk_free_bytes":free}, "execution":{"inference_started":False,"jobs_claimed":False,"provider_contacted":False}}
 
 def main():
-    argparse.ArgumentParser(description="Read-only RF983 MOTION GPU deployment preflight").parse_args()
+    parser = argparse.ArgumentParser(description="Read-only RF983 MOTION GPU deployment preflight")
+    parser.add_argument("--check", action="store_true", help="Run checks only; this command never starts a worker.")
+    parser.parse_args()
     report = inspect_deployment()
     print(json.dumps(report, indent=2))
     return 0 if report["ready_for_worker_start"] else 2
