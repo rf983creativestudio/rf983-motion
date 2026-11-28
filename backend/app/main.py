@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from pydantic import BaseModel, Field, field_validator
 
-APP_VERSION="2.0.0"
+APP_VERSION="2.4.0"
 ALLOWED_ORIGINS=[x.strip() for x in os.getenv("RF983_ALLOWED_ORIGINS","http://localhost:8000,http://127.0.0.1:8000").split(",") if x.strip()]
 WORKER_TOKEN=os.getenv("RF983_WORKER_TOKEN","")
 OPERATIONS_TOKEN=os.getenv("RF983_OPERATIONS_TOKEN","")
@@ -145,7 +145,38 @@ def health():
 @app.get("/api/system/ready")
 def system_ready():
     connected=worker_fresh()
-    return {"api":"ready","worker":"connected" if connected else "offline","engine":"preflight_agent_connected" if connected else "not_configured","generation_enabled":False,"generation_reason":"No verified model adapter, creator authentication or successful end-to-end render is configured.","checks":{"worker_token_configured":bool(WORKER_TOKEN),"worker_heartbeat_fresh":connected,"worker_diagnostics_received":bool(_worker.get("diagnostics")) if connected else False,"model_adapter_verified":False,"durable_job_queue":True,"durable_queue_storage":_jobs().storage_info()["durable"],"private_result_storage":True,"private_result_storage_durable":_artifacts().storage_info()["durability_verified"],"user_authentication":False,"successful_render_verified":False,"persistent_worker_history":True}}
+    checks = {
+        "worker_token_configured": bool(WORKER_TOKEN),
+        "worker_heartbeat_fresh": connected,
+        "worker_diagnostics_received": bool(_worker.get("diagnostics")) if connected else False,
+        "model_adapter_verified": False,
+        "durable_job_queue": True,
+        "durable_queue_storage": _jobs().storage_info()["durable"],
+        "private_result_storage": True,
+        "private_result_storage_durable": _artifacts().storage_info()["durability_verified"],
+        "user_authentication": False,
+        "successful_render_verified": False,
+        "persistent_worker_history": True,
+    }
+    production_gates = {
+        "verified_model_adapter": False,
+        "worker_connected": connected,
+        "durable_queue_storage": checks["durable_queue_storage"],
+        "durable_artifact_storage": checks["private_result_storage_durable"],
+        "creator_authentication": False,
+        "successful_end_to_end_render": False,
+    }
+    return {
+        "api": "ready",
+        "api_version": APP_VERSION,
+        "worker": "connected" if connected else "offline",
+        "engine": "preflight_agent_connected" if connected else "not_configured",
+        "generation_enabled": False,
+        "generation_reason": "Generation remains disabled until every production gate passes and a real render is verified.",
+        "checks": checks,
+        "production_gates": production_gates,
+        "production_blockers": [name for name, passed in production_gates.items() if not passed],
+    }
 
 @app.get("/api/capabilities")
 def capabilities():

@@ -57,4 +57,4 @@ jobs:
       - name: Build cloud worker runtime image
         run: docker build -f Dockerfile.worker -t rf983-motion-worker:ci .
       - name: Verify deployment manifest files
-        run: test -s render.yaml && test -s deploy/start.sh && test -s deploy/nginx.conf.template && test -s docs/DEPLOYMENT_0.9.0.md && test -s docs/CLOUD_GPU_WORKER_2.1.0.md && test -s docs/GPU_DEPLOYMENT_READINESS_2.3.0.md
+        run: test -s render.yaml && test -s deploy/start.sh && test -s deploy/nginx.conf.template && test -s docs/DEPLOYMENT_0.9.0.md && test -s docs/CLOUD_GPU_WORKER_2.1.0.md && test -s docs/GPU_DEPLOYMENT_READINESS_2.3.0.md && test -s docs/FINAL_RELEASE_2.4.0.md

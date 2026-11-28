@@ -94,7 +94,7 @@
 <section class="view" id="view-models">
   <div class="page-heading"><div><div class="eyebrow">INFERENCE RESEARCH / 04</div><h1>The <i>model lab.</i></h1><p>Evaluate model families before committing to hardware, weights or a deployment path.</p></div><span class="offline-pill"><i></i> NO GPU WORKER CONNECTED</span></div>
   <div class="panel control-room-panel" id="production-control-room">
-    <div class="control-room-head"><div><div class="eyebrow">PRIVATE OPERATIONS / BUILD 1.9.0</div><h2>Production <i>control room.</i></h2><p class="helper">One authenticated snapshot of worker health, model and engine readiness, queue activity and storage limitations. Job prompts and assets are never returned in this view.</p></div><button class="small-outline" id="refresh-control-room" type="button">Refresh control room ↻</button></div>
+    <div class="control-room-head"><div><div class="eyebrow">PRIVATE OPERATIONS / BUILD 2.4.0</div><h2>Production <i>control room.</i></h2><p class="helper">One authenticated snapshot of worker health, model and engine readiness, queue activity and storage limitations. Job prompts and assets are never returned in this view.</p></div><button class="small-outline" id="refresh-control-room" type="button">Refresh control room ↻</button></div>
     <div class="control-room-stats" id="control-room-stats"><div><b>—</b><small>WORKER</small></div><div><b>—</b><small>QUEUED</small></div><div><b>—</b><small>RUNNING</small></div><div><b>—</b><small>SUCCEEDED</small></div><div><b>—</b><small>FAILED</small></div></div>
     <div class="control-room-status" id="control-room-status" aria-live="polite">Connect the backend and enter your private operations token in System Control Centre, then refresh this view.</div>
     <div class="control-room-queue-head"><div><b>Recent private jobs</b><small>Latest 30 · metadata only</small></div><span id="control-room-storage">STORAGE UNKNOWN</span></div>
@@ -107,7 +107,7 @@
     <div class="control-room-foot"><b>Private by default</b><span>Files are never exposed through public URLs. Current container storage may be temporary; configure and verify a persistent mounted volume before relying on retained renders.</span></div>
   </div>
   <div class="panel engine-control-panel" id="cloud-engine-centre">
-    <div class="engine-control-head"><div><div class="eyebrow">CLOUD INFERENCE / ENGINE GATEWAY 1.9.0</div><h2>Cloud engine <i>control centre.</i></h2><p class="helper">Inspect connection routes and their data, billing and verification requirements. This registry does not connect to providers or send prompts.</p></div><button class="small-outline" id="refresh-engines" type="button">Refresh registry ↻</button></div>
+    <div class="engine-control-head"><div><div class="eyebrow">CLOUD INFERENCE / ENGINE GATEWAY / FINAL RELEASE 2.4.0</div><h2>Cloud engine <i>control centre.</i></h2><p class="helper">Inspect connection routes and their data, billing and verification requirements. This registry does not connect to providers or send prompts.</p></div><button class="small-outline" id="refresh-engines" type="button">Refresh registry ↻</button></div>
     <div class="engine-summary" id="engine-summary"><span><b>—</b><small>REGISTERED</small></span><span><b>—</b><small>CONFIGURED</small></span><span><b>—</b><small>VERIFIED</small></span><span><b>OFF</b><small>GENERATION</small></span></div>
     <div class="engine-registry-grid" id="engine-registry-grid" aria-live="polite"><div class="engine-registry-empty">Connect the backend and refresh to load the engine registry.</div></div>
     <div class="engine-privacy-note"><b>Privacy and billing gate</b><span>Provider integrations may transmit prompts and reference assets and may incur charges. RF983 MOTION will not enable a provider, accept credentials or send creative data until you explicitly choose and configure an engine.</span></div>
@@ -115,7 +115,7 @@
   </div>
 
   <div class="panel engine-evaluation-panel" id="engine-evaluation">
-    <div class="eyebrow">DECISION INTELLIGENCE / BUILD 1.7.0</div>
+    <div class="eyebrow">DECISION INTELLIGENCE / FINAL RELEASE 2.4.0</div>
     <div class="engine-evaluation-head"><div><h2>Engine evaluation <i>&amp; selection.</i></h2><p class="helper">A conservative architecture assessment for our current launch constraints. It does not benchmark providers, check live prices or contact engines.</p></div><span class="engine-hold-pill">NO ENGINE APPROVED</span></div>
     <div class="engine-decision" id="engine-decision" aria-live="polite"><b>Hold — do not activate a cloud engine yet.</b><p>Loading the evaluation from the RF983 backend…</p></div>
     <div class="engine-evaluation-grid" id="engine-evaluation-grid"><div class="engine-registry-empty">Waiting for the backend evaluation.</div></div>
@@ -124,7 +124,7 @@
   <div class="panel architecture-panel launch-panel">
     <div class="eyebrow">PUBLIC LAUNCH / DEPLOYMENT PACKAGE</div>
     <h2>One service. One secure entry point.</h2>
-    <p class="helper">The repository now includes a single-container deployment image and Render Blueprint. The Render API is deployed and connected to the GitHub Pages studio. Free-tier sleep and ephemeral local storage remain operational limitations.</p>
+    <p class="helper">The repository includes a single-container deployment image and Render Blueprint. Verify the live API connection in System Control Centre before relying on it. Free-tier sleep and ephemeral local storage remain operational limitations.</p>
     <div class="worker-steps">
       <div><span>01</span><b>Connect GitHub</b><small>Choose the private RF983 MOTION repository in Render Blueprint.</small></div>
       <div><span>02</span><b>Apply Blueprint</b><small>Render builds the frontend and API together from the root Dockerfile.</small></div>
@@ -185,7 +185,7 @@
     </div>
   <div class="panel reality-panel"><b>Zero-budget reality check</b><p>GitHub can store source code and host a static interface; it cannot run a cinematic video model. High-quality generation requires GPU time, model storage and bandwidth. We will keep the project private, avoid committing large weights or secrets, and only enable generation after a real worker and secure job pipeline are configured.</p></div>
 </section>
-<footer class="app-footer"><span>RF983 MOTION · BUILD 1.7.0</span><span>PRIVATE CREATIVE TECHNOLOGY PROJECT</span><span>DESIGNED FOR THE FRAME</span></footer>
+<footer class="app-footer"><span>RF983 MOTION · BUILD 2.4.0</span><span>PRIVATE CREATIVE TECHNOLOGY PROJECT</span><span>DESIGNED FOR THE FRAME</span></footer>
 </main>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>

@@ -10,7 +10,7 @@ def test_health_reports_inference_offline():
     response = client.get("/api/health")
     assert response.status_code == 200
     assert response.json()["inference"] == "offline"
-    assert response.json()["version"] == "2.0.0"
+    assert response.json()["version"] == "2.4.0"
 
 def test_capabilities_do_not_claim_generation():
     response = client.get("/api/capabilities")
@@ -32,6 +32,11 @@ def test_readiness_lists_production_gates():
     assert data["checks"]["durable_job_queue"] is True
     assert data["checks"]["user_authentication"] is False
     assert data["checks"]["successful_render_verified"] is False
+    assert data["api_version"] == "2.4.0"
+    assert data["generation_enabled"] is False
+    assert "verified_model_adapter" in data["production_blockers"]
+    assert "creator_authentication" in data["production_blockers"]
+    assert data["production_gates"]["successful_end_to_end_render"] is False
 
 def test_worker_registration_disabled_without_secret(monkeypatch):
     monkeypatch.setattr("app.main.WORKER_TOKEN", "")
@@ -112,7 +117,7 @@ def test_operations_summary_keeps_generation_disabled(monkeypatch,tmp_path):
     monkeypatch.setattr("app.main.STATE_DB",str(tmp_path/"ops.sqlite3"))
     monkeypatch.setattr("app.main.OPERATIONS_TOKEN","ops-secret")
     data=client.get("/api/operations/summary",headers={"X-Operations-Token":"ops-secret"}).json()
-    assert data["api_version"]=="2.0.0" and data["persistent_state"]=="sqlite"
+    assert data["api_version"]=="2.4.0" and data["persistent_state"]=="sqlite"
     assert data["generation_enabled"] is False
 
 
