@@ -128,6 +128,9 @@ class CloudWorker:
             if not isinstance(result,RenderResult):
                 raise WorkerConfigError("Adapter render() must return a RenderResult.")
             if lost.is_set(): raise LeaseLost("Worker lease was lost during rendering; result will not be uploaded.")
+            # Re-check ownership immediately before validation/upload; cancellation
+            # clears the server-side lease even if the periodic thread has not fired.
+            self._json_request("POST",f"/api/worker/jobs/{job_id}/heartbeat?lease_seconds={self.config['lease_seconds']}")
             metadata=self.validator.validate(Path(result.output_path))
             if lost.is_set(): raise LeaseLost("Worker lease expired before artifact upload.")
             upload=self._upload(job_id,Path(metadata["path"]))
