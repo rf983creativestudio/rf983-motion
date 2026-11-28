@@ -1,0 +1,9 @@
+# RF983 MOTION cloud worker runtime base image (no model weights or CUDA)
+FROM python:3.12-slim
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PYTHONPATH=/opt/rf983
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg ca-certificates && rm -rf /var/lib/apt/lists/*
+WORKDIR /opt/rf983
+COPY worker/ /opt/rf983/worker/
+RUN useradd --create-home --uid 10001 rf983 && mkdir -p /opt/rf983/renders && chown -R rf983:rf983 /opt/rf983
+USER rf983
+ENTRYPOINT ["python","-m","worker.cloud_worker"]
